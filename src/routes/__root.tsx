@@ -7,6 +7,7 @@ import {
 import { TRPCReactProvider } from "~/trpc/react";
 import { Toaster } from "react-hot-toast";
 import { useAuthStore } from "~/stores/authStore";
+import { useCheckAIAvailability } from "~/hooks/useAIAvailability";
 import { useEffect } from "react";
 import { api } from "~/trpc/react";
 
@@ -17,6 +18,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   const isFetching = useRouterState({ select: (s) => s.isLoading });
   const { token, isAuthenticated, login, logout, isLoading } = useAuthStore();
+  
+  // Check AI availability
+  useCheckAIAvailability();
   
   // Check if token is valid on app load
   const { data: userData } = api.getMe.useQuery(

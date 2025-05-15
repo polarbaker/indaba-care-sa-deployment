@@ -1,5 +1,5 @@
 import toast from "react-hot-toast";
-import { isAIAvailable } from "~/env";
+import { useAIStore } from "~/stores/aiStore";
 
 /**
  * Shows an enhanced toast notification when an AI feature is attempted but unavailable
@@ -33,13 +33,20 @@ export function showAIUnavailableMessage(
  * @returns Whether AI is available
  */
 export function checkAIAvailability(featureName: string = "This AI feature"): boolean {
-  const aiAvailable = isAIAvailable();
+  const { isAIAvailable, isCheckingAIAvailability } = useAIStore.getState();
   
-  if (!aiAvailable) {
+  // If we're still checking, assume AI is not available yet
+  if (isCheckingAIAvailability) {
+    // Show a temporary message
+    toast.loading("Checking AI availability...");
+    return false;
+  }
+  
+  if (!isAIAvailable) {
     showAIUnavailableMessage(featureName);
   }
   
-  return aiAvailable;
+  return isAIAvailable;
 }
 
 /**

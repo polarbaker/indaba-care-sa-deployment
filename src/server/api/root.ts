@@ -10,6 +10,9 @@ import { login } from "./procedures/auth/login";
 import { getMe } from "./procedures/auth/getMe";
 import { verifyToken } from "./procedures/auth/verifyToken";
 
+// App procedures
+import { getAIAvailability } from "./procedures/app/getAIAvailability";
+
 // Sync procedures
 import { syncOperation } from "./procedures/sync/syncOperation";
 
@@ -30,6 +33,9 @@ export const appRouter = createTRPCRouter({
   login,
   getMe,
   verifyToken,
+  
+  // App procedures
+  getAIAvailability,
   
   // Sync procedures
   syncOperation,

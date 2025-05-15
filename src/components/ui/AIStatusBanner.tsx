@@ -8,8 +8,13 @@ import { Button } from "~/components/ui/Button";
  * and provides information about which features are affected.
  */
 export function AIStatusBanner() {
-  const { isAIAvailable } = useAIStore();
+  const { isAIAvailable, isCheckingAIAvailability } = useAIStore();
   const [expanded, setExpanded] = useState(false);
+  
+  // Don't show anything while checking AI availability
+  if (isCheckingAIAvailability) {
+    return null;
+  }
   
   // Only show banner when AI is not available
   if (isAIAvailable) {

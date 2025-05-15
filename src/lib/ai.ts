@@ -1,10 +1,17 @@
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
-import { serverEnv, isAIAvailable } from "~/env";
+import { serverEnv } from "~/env";
+import { useAIStore } from "~/stores/aiStore";
 
 // Initialize the OpenAI model if API key is available
 const initializeModel = () => {
-  if (isAIAvailable()) {
+  // On the server side, we can directly check the API key
+  if (typeof window === 'undefined' && serverEnv.OPENAI_API_KEY) {
+    return openai("gpt-4o", { apiKey: serverEnv.OPENAI_API_KEY });
+  }
+  // On the client side, we need to use the store
+  // This assumes the store has been initialized
+  if (typeof window !== 'undefined' && useAIStore.getState().isAIAvailable) {
     return openai("gpt-4o", { apiKey: serverEnv.OPENAI_API_KEY });
   }
   return null;
@@ -31,7 +38,11 @@ export async function summarizeMessages(messages: { content: string; senderName:
   if (!messages.length) return "";
   
   // Return a placeholder if AI is not available
-  if (!isAIAvailable() || !model) {
+  const isAIAvailable = typeof window === 'undefined' 
+    ? !!serverEnv.OPENAI_API_KEY 
+    : useAIStore.getState().isAIAvailable;
+  
+  if (!isAIAvailable || !model) {
     console.log("AI summary generation unavailable - OpenAI API key not configured");
     return "";
   }
@@ -78,8 +89,13 @@ SUMMARY:
  * @returns An array of relevant tags as a JSON string
  */
 export async function generateObservationTags(observationText: string, observationType: string) {
+  // Get AI availability status
+  const isAIAvailable = typeof window === 'undefined' 
+    ? !!serverEnv.OPENAI_API_KEY 
+    : useAIStore.getState().isAIAvailable;
+  
   // Return default tags if AI is not available
-  if (!isAIAvailable() || !model) {
+  if (!isAIAvailable || !model) {
     console.log("AI tag generation unavailable - OpenAI API key not configured");
     return JSON.stringify(["observation", observationType.toLowerCase()]);
   }
@@ -146,8 +162,13 @@ export async function recommendContent(
   interests: string[] = [],
   developmentalFocus: string[] = []
 ) {
+  // Get AI availability status
+  const isAIAvailable = typeof window === 'undefined' 
+    ? !!serverEnv.OPENAI_API_KEY 
+    : useAIStore.getState().isAIAvailable;
+  
   // Return default recommendations if AI is not available
-  if (!isAIAvailable() || !model) {
+  if (!isAIAvailable || !model) {
     console.log("AI content recommendations unavailable - OpenAI API key not configured");
     return [
       {
@@ -238,8 +259,13 @@ export async function assistMessageDrafting(
   },
   draft: string
 ) {
+  // Get AI availability status
+  const isAIAvailable = typeof window === 'undefined' 
+    ? !!serverEnv.OPENAI_API_KEY 
+    : useAIStore.getState().isAIAvailable;
+  
   // Return the original draft if AI is not available
-  if (!isAIAvailable() || !model) {
+  if (!isAIAvailable || !model) {
     console.log("AI message assistance unavailable - OpenAI API key not configured");
     return draft;
   }

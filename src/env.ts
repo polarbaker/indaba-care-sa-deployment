@@ -43,15 +43,10 @@ export const clientEnv = isBrowser
       VITE_OPENAI_AVAILABLE: process.env.OPENAI_API_KEY ? "true" : "false",
     };
 
-// Helper function to check if AI features are available (works on both client and server)
+// Helper function to check if AI features are available (now server-side only)
 export const isAIAvailable = () => {
-  if (isBrowser) {
-    // Client-side check
-    return clientEnv.VITE_OPENAI_AVAILABLE === "true";
-  } else {
-    // Server-side check
-    return !!serverEnv.OPENAI_API_KEY;
-  }
+  // Server-side check
+  return !!serverEnv.OPENAI_API_KEY;
 };
 
 // For backwards compatibility with existing imports
