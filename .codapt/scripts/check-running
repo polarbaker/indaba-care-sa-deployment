@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+cd `dirname $0`
+cd .. # .codapt
+cd .. # project root
+
+# get the port from the .env file
+source .env
+
+# ensure port is set
+if [ -z "$PORT" ]; then
+  echo "PORT is not set, exiting..."
+  exit 1
+fi
+
+# check if the app is running
+status_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$PORT/nonexistent)
+if [[ $status_code =~ ^5[0-9][0-9]$ ]]; then
+  echo "App is not running or experiencing server errors, exiting..."
+  exit 1
+fi
+
+echo "App is running"

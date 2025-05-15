@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:postgres@postgres/app" // hardcoded because it's an internal docker connection
+}
+
+enum UserRole {
+  NANNY
+  PARENT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  nannyProfile  NannyProfile?
+  parentProfile ParentProfile?
+  adminProfile  AdminProfile?
+  messages      Message[]
+  sentMessages  Message[]  @relation("MessageSender")
+}
+
+model NannyProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName         String
+  lastName          String
+  phoneNumber       String?
+  location          String?
+  bio               String?
+  availability      String?
+  profileImageUrl   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  certifications    Certification[]
+  observations      Observation[]
+  assignedFamilies  FamilyNanny[]
+  professionalDev   ProfessionalDevelopment[]
+  hoursLogs         HoursLog[]
+}
+
+model ParentProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String
+  lastName        String
+  phoneNumber     String?
+  address         String?
+  profileImageUrl String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  family          Family?
+  children        Child[]
+}
+
+model AdminProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String
+  lastName        String
+  department      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Family {
+  id              String    @id @default(cuid())
+  name            String
+  parentId        String    @unique
+  parent          ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  homeDetails     String?   // JSON string with home environment details
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  children        Child[]
+  nannies         FamilyNanny[]
+}
+
+model Child {
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime
+  gender          String?
+  medicalInfo     String?   // JSON string with medical information
+  allergies       String?
+  parentId        String
+  parent          ParentProfile @relation(fields: [parentId], references: [id])
+  familyId        String?
+  family          Family?   @relation(fields: [familyId], references: [id])
+  profileImageUrl String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  observations    Observation[]
+  milestones      ChildMilestone[]
+}
+
+model FamilyNanny {
+  id              String    @id @default(cuid())
+  familyId        String
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  startDate       DateTime  @default(now())
+  endDate         DateTime?
+  status          String    // Active, Inactive, Pending
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([familyId, nannyId, status])
+}
+
+enum ObservationType {
+  TEXT
+  PHOTO
+  VIDEO
+  AUDIO
+}
+
+model Observation {
+  id              String          @id @default(cuid())
+  nannyId         String
+  nanny           NannyProfile    @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  childId         String
+  child           Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  type            ObservationType
+  content         String          // Text content or URL to media
+  notes           String?         // Private notes
+  isPermanent     Boolean         @default(true) // Permanent or temporary storage
+  aiTags          String?         // JSON array of AI-generated tags
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  content         String
+  encryptedContent String?  // For end-to-end encrypted messages
+  senderId        String
+  sender          User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId     String
+  recipient       User      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  isRead          Boolean   @default(false)
+  aiSummary       String?   // AI-generated summary
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Certification {
+  id              String    @id @default(cuid())
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  name            String
+  issuingAuthority String
+  dateIssued      DateTime
+  expiryDate      DateTime?
+  certificateUrl  String?   // URL to certificate document
+  status          String    // Active, Expired, Pending
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ProfessionalDevelopment {
+  id              String    @id @default(cuid())
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  provider        String?
+  hoursCompleted  Float
+  dateCompleted   DateTime
+  certificateUrl  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model HoursLog {
+  id              String    @id @default(cuid())
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  date            DateTime
+  hoursWorked     Float
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Resource {
+  id              String    @id @default(cuid())
+  title           String
+  description     String
+  contentUrl      String
+  resourceType    String    // Article, Video, PDF, etc.
+  tags            String    // JSON array of tags
+  aiTags          String?   // JSON array of AI-generated tags
+  createdBy       String?   // Admin who created it
+  visibleTo       String[]  // Array of roles that can see this resource
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  milestones      MilestoneResource[]
+}
+
+model Milestone {
+  id              String    @id @default(cuid())
+  name            String
+  description     String
+  ageRangeStart   Int       // Age in months
+  ageRangeEnd     Int       // Age in months
+  category        String    // Physical, Cognitive, Social, etc.
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  childMilestones ChildMilestone[]
+  resources       MilestoneResource[]
+}
+
+model ChildMilestone {
+  id              String    @id @default(cuid())
+  childId         String
+  child           Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  milestoneId     String
+  milestone       Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  achievedDate    DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([childId, milestoneId])
+}
+
+model MilestoneResource {
+  id              String    @id @default(cuid())
+  milestoneId     String
+  milestone       Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  resourceId      String
+  resource        Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  
+  @@unique([milestoneId, resourceId])
+}
+
+model SyncLog {
+  id              String    @id @default(cuid())
+  userId          String
+  operationType   String    // Create, Update, Delete
+  modelName       String    // The name of the model being synced
+  recordId        String    // ID of the record being synced
+  changeData      String    // JSON string of changes
+  syncStatus      String    // Pending, Completed, Failed
+  syncedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
