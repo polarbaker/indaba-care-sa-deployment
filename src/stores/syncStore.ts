@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "~/trpc/react";
+import { useAuthStore } from "~/stores/authStore";
 
 type SyncOperation = {
   id: string;
@@ -175,8 +176,11 @@ async function syncPendingOperations() {
     incrementSyncErrors
   } = useSyncStore.getState();
   
-  // Don't start syncing if already in progress or no operations to sync
-  if (isSyncing || pendingOperations.length === 0) return;
+  // Get the authentication token
+  const token = useAuthStore.getState().token;
+  
+  // Don't start syncing if already in progress, no operations to sync, or no token
+  if (isSyncing || pendingOperations.length === 0 || !token) return;
   
   setSyncing(true);
   
@@ -200,8 +204,9 @@ async function syncPendingOperations() {
         // Mark operation as syncing
         updateOperationStatus(operation.id, "syncing");
         
-        // Call the appropriate API endpoint
+        // Call the appropriate API endpoint with token
         await api.syncOperation.mutate({
+          token,
           operationType: operation.operationType,
           modelName: operation.modelName,
           recordId: operation.recordId,

@@ -10,7 +10,7 @@ export function useCheckAIAvailability() {
   const { setAIAvailable, setIsCheckingAIAvailability, isCheckingAIAvailability } = useAIStore();
   
   // Use tRPC query to check AI availability
-  const { data, isPending } = api.getAIAvailability.useQuery(
+  const { data, isPending, error } = api.getAIAvailability.useQuery(
     undefined, // No input needed
     {
       // Don't refetch on window focus or reconnect - AI availability rarely changes during a session
@@ -19,6 +19,13 @@ export function useCheckAIAvailability() {
       // But do retry if it fails
       retry: 3,
       retryDelay: 1000,
+      // Handle errors gracefully
+      onError: (err) => {
+        console.error("Error checking AI availability:", err);
+        // If we can't check availability, assume it's not available
+        setAIAvailable(false);
+        setIsCheckingAIAvailability(false);
+      }
     }
   );
   
@@ -29,10 +36,16 @@ export function useCheckAIAvailability() {
     if (data !== undefined) {
       setAIAvailable(data.available);
     }
-  }, [data, isPending, setAIAvailable, setIsCheckingAIAvailability]);
+    
+    // If there's an error, assume AI is not available
+    if (error) {
+      setAIAvailable(false);
+    }
+  }, [data, isPending, error, setAIAvailable, setIsCheckingAIAvailability]);
   
   return {
     isAIAvailable: data?.available ?? false,
     isCheckingAIAvailability: isPending,
+    error
   };
 }

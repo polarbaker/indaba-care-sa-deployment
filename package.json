@@ -41,7 +41,9 @@
     "ai": "^4.3.15",
     "zustand": "^5.0.4",
     "react-hook-form": "^7.56.3",
-    "@hookform/resolvers": "^5.0.1"
+    "@hookform/resolvers": "^5.0.1",
+    "react-router-dom": "^7.6.0",
+    "framer-motion": "^12.12.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",

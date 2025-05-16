@@ -11,7 +11,7 @@ export const createObservation = baseProcedure
     z.object({
       token: z.string(),
       childId: z.string(),
-      type: z.enum(["TEXT", "PHOTO", "VIDEO", "AUDIO"]),
+      type: z.enum(["TEXT", "PHOTO", "VIDEO", "AUDIO", "CHECKLIST", "RICHTEXT"]),
       content: z.string(),
       notes: z.string().optional(),
       isPermanent: z.boolean().default(true),

@@ -52,6 +52,8 @@ model NannyProfile {
   assignedFamilies  FamilyNanny[]
   professionalDev   ProfessionalDevelopment[]
   hoursLogs         HoursLog[]
+  agencyAssignments AgencyNanny[]
+  receivedFeedback  Feedback[]
 }
 
 model ParentProfile {
@@ -69,6 +71,7 @@ model ParentProfile {
   // Relations
   family          Family?
   children        Child[]
+  givenFeedback   Feedback[]
 }
 
 model AdminProfile {
@@ -115,6 +118,7 @@ model Child {
   // Relations
   observations    Observation[]
   milestones      ChildMilestone[]
+  feedback        Feedback[]
 }
 
 model FamilyNanny {
@@ -137,6 +141,8 @@ enum ObservationType {
   PHOTO
   VIDEO
   AUDIO
+  CHECKLIST
+  RICHTEXT
 }
 
 model Observation {
@@ -217,11 +223,14 @@ model Resource {
   aiTags          String?   // JSON array of AI-generated tags
   createdBy       String?   // Admin who created it
   visibleTo       String[]  // Array of roles that can see this resource
+  developmentalStage String? // Age range or developmental stage
+  previewEnabled  Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   // Relations
   milestones      MilestoneResource[]
+  contentTags     ResourceTag[]
 }
 
 model Milestone {
@@ -273,6 +282,116 @@ model SyncLog {
   changeData      String    // JSON string of changes
   syncStatus      String    // Pending, Completed, Failed
   syncedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model FlaggedContent {
+  id              String    @id @default(cuid())
+  contentType     String    // Observation, Message, Resource, etc.
+  contentId       String
+  flaggedBy       String    // User ID who flagged it
+  reason          String
+  keywords        String?   // JSON array of flagged keywords
+  status          String    // Pending, Reviewed, Dismissed
+  priority        String    // Low, Medium, High, Urgent
+  moderatorNotes  String?
+  moderatedBy     String?   // Admin ID who moderated
+  moderatedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ContentTag {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  category        String?   // Development area, age group, etc.
+  isAutomated     Boolean   @default(false)
+  createdBy       String?   // Admin ID who created it
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  resources       ResourceTag[]
+}
+
+model ResourceTag {
+  id              String    @id @default(cuid())
+  resourceId      String
+  resource        Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  tagId           String
+  tag             ContentTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  
+  @@unique([resourceId, tagId])
+}
+
+model Agency {
+  id              String    @id @default(cuid())
+  name            String
+  contactPerson   String?
+  contactEmail    String?
+  contactPhone    String?
+  address         String?
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  nannyAssignments AgencyNanny[]
+  emergencyProtocols String?   // JSON string with emergency protocols
+}
+
+model AgencyNanny {
+  id              String    @id @default(cuid())
+  agencyId        String
+  agency          Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  role            String?   // Role within agency
+  startDate       DateTime  @default(now())
+  endDate         DateTime?
+  payRate         Float?
+  paymentSchedule String?
+  status          String    // Active, Inactive, Pending
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([agencyId, nannyId])
+}
+
+model ReportSchedule {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  reportType      String    // NannyPerformance, ChildMilestones, ResourceUsage, etc.
+  frequency       String    // Weekly, Monthly, Custom
+  nextRunDate     DateTime
+  lastRunDate     DateTime?
+  format          String[]  // PDF, Excel, etc.
+  recipients      String[]  // Array of email addresses
+  createdBy       String    // Admin ID who created it
+  filters         String?   // JSON string with report filters
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Feedback {
+  id              String    @id @default(cuid())
+  parentId        String
+  parent          ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  childId         String?
+  child           Child?    @relation(fields: [childId], references: [id], onDelete: SetNull)
+  type            String    // care, progress, communication, general
+  rating          Int
+  content         String
+  followUp        String?
+  nannyResponse   String?
+  status          String    // pending, acknowledged, responded
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
