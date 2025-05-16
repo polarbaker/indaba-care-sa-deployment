@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardLayout } from "~/components/layouts/DashboardLayout";
-import { ProfileDetails } from "~/components/parent/ProfileDetails";
 import { ChildList } from "~/components/parent/ChildList";
 import { NannyView } from "~/components/parent/NannyView";
 import { ChatMessaging } from "~/components/messaging/ChatMessaging";
@@ -10,6 +9,12 @@ import { ResourcesHub } from "~/components/parent/ResourcesHub";
 import { FeedbackForm } from "~/components/parent/FeedbackForm";
 import { useAuthStore } from "~/stores/authStore";
 import { api } from "~/trpc/react";
+import { ProfileDetail } from "~/components/settings/ProfileDetail";
+import { AccountSecurity } from "~/components/settings/AccountSecurity";
+import { NotificationSettings } from "~/components/settings/NotificationSettings";
+import { PrivacySettings } from "~/components/settings/PrivacySettings";
+import { SyncSettings } from "~/components/settings/SyncSettings";
+import toast from "react-hot-toast";
 
 const parentNavigation = [
   {
@@ -69,7 +74,7 @@ const parentNavigation = [
   },
 ];
 
-type ProfileTab = "profile" | "nanny" | "chat" | "development" | "resources" | "feedback";
+type ProfileTab = "profile" | "children" | "nanny" | "chat" | "development" | "resources" | "feedback" | "security" | "notifications" | "privacy" | "sync";
 
 export const Route = createFileRoute("/parent/profile/")({
   component: ParentProfile,
@@ -124,24 +129,40 @@ function ParentProfile() {
     
     switch (activeTab) {
       case "profile":
-        return (
-          <div className="space-y-8">
-            <ProfileDetails 
-              profile={profileData} 
-              onProfileUpdated={() => refetchProfile()}
-            />
-            <ChildList 
-              children={profileData.children} 
-              onChildUpdated={() => refetchProfile()}
-            />
-          </div>
-        );
+        return <ProfileDetail 
+          profile={profileData} 
+          userType="parent" 
+          onProfileUpdated={() => refetchProfile()} 
+        />;
+      case "children":
+        return <ChildList 
+          children={profileData.children || []} 
+          onChildUpdated={() => refetchProfile()}
+        />;
       case "nanny":
-        return (
-          <NannyView 
-            nannies={profileData.family?.nannies || []} 
-          />
-        );
+        return <NannyView 
+          nannies={profileData.family?.nannies || []} 
+        />;
+      case "security":
+        return <AccountSecurity />;
+      case "notifications":
+        return <NotificationSettings 
+          initialSettings={profileData.user?.notificationSettings}
+          onSettingsUpdated={() => refetchProfile()}
+        />;
+      case "privacy":
+        return <PrivacySettings 
+          initialSettings={{
+            profileVisibility: profileData.user?.profileVisibility || "connected",
+            marketingOptIn: profileData.user?.marketingOptIn || false,
+          }}
+          onSettingsUpdated={() => refetchProfile()}
+        />;
+      case "sync":
+        return <SyncSettings 
+          initialSettings={profileData.user?.settings}
+          onSettingsUpdated={() => refetchProfile()}
+        />;
       case "chat":
         return <ChatMessaging />;
       case "development":
@@ -175,6 +196,16 @@ function ParentProfile() {
               Profile
             </button>
             <button
+              onClick={() => setActiveTab("children")}
+              className={`${
+                activeTab === "children"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Children
+            </button>
+            <button
               onClick={() => setActiveTab("nanny")}
               className={`${
                 activeTab === "nanny"
@@ -182,7 +213,47 @@ function ParentProfile() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Nanny View
+              Nannies
+            </button>
+            <button
+              onClick={() => setActiveTab("security")}
+              className={`${
+                activeTab === "security"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Security
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`${
+                activeTab === "notifications"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Notifications
+            </button>
+            <button
+              onClick={() => setActiveTab("privacy")}
+              className={`${
+                activeTab === "privacy"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Privacy
+            </button>
+            <button
+              onClick={() => setActiveTab("sync")}
+              className={`${
+                activeTab === "sync"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Sync
             </button>
             <button
               onClick={() => setActiveTab("chat")}
@@ -192,7 +263,7 @@ function ParentProfile() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              AI Chat & Messaging
+              Chat
             </button>
             <button
               onClick={() => setActiveTab("development")}
@@ -202,7 +273,7 @@ function ParentProfile() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Development Tracker
+              Development
             </button>
             <button
               onClick={() => setActiveTab("resources")}
@@ -212,7 +283,7 @@ function ParentProfile() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Resources Hub
+              Resources
             </button>
             <button
               onClick={() => setActiveTab("feedback")}

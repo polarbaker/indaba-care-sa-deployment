@@ -69,6 +69,8 @@ interface ChildListProps {
 export function ChildList({ children, onChildUpdated }: ChildListProps) {
   const [selectedChild, setSelectedChild] = useState<ChildType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [childToDelete, setChildToDelete] = useState<ChildType | null>(null);
   const { token } = useAuthStore();
   const { isOnline, addOperation } = useSyncStore();
   
@@ -95,6 +97,21 @@ export function ChildList({ children, onChildUpdated }: ChildListProps) {
     },
     onError: (error) => {
       toast.error(`Failed to update child details: ${error.message}`);
+    },
+  });
+  
+  // Archive child mutation
+  const archiveChildMutation = api.archiveChild.useMutation({
+    onSuccess: () => {
+      toast.success("Child archived successfully");
+      setShowDeleteConfirm(false);
+      setChildToDelete(null);
+      if (onChildUpdated) {
+        onChildUpdated();
+      }
+    },
+    onError: (error) => {
+      toast.error(`Failed to archive child: ${error.message}`);
     },
   });
   
@@ -136,6 +153,39 @@ export function ChildList({ children, onChildUpdated }: ChildListProps) {
     reset();
     setIsEditing(false);
     setSelectedChild(null);
+  };
+  
+  const handleOpenArchiveConfirm = (child: ChildType) => {
+    setChildToDelete(child);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmArchive = () => {
+    if (!childToDelete) return;
+
+    if (isOnline) {
+      archiveChildMutation.mutate({
+        token: token!,
+        childId: childToDelete.id,
+      });
+    } else {
+      try {
+        addOperation({
+          operationType: "UPDATE",
+          modelName: "Child",
+          recordId: childToDelete.id,
+          data: { isArchived: true }, // Assuming an isArchived field
+        });
+        toast.success("Child scheduled for archival. Changes will sync when back online.");
+        setShowDeleteConfirm(false);
+        setChildToDelete(null);
+        if (onChildUpdated) {
+          onChildUpdated();
+        }
+      } catch (error) {
+        toast.error("Failed to schedule child archival offline.");
+      }
+    }
   };
   
   // Handle form submission
@@ -412,6 +462,13 @@ export function ChildList({ children, onChildUpdated }: ChildListProps) {
                           >
                             Edit
                           </button>
+                          <button
+                            onClick={() => handleOpenArchiveConfirm(child)}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50"
+                            disabled={!isOnline && selectedChild?.id === child.id && isEditing} // Disable if offline and editing same child
+                          >
+                            Archive
+                          </button>
                         </div>
                       </div>
                       
@@ -454,6 +511,42 @@ export function ChildList({ children, onChildUpdated }: ChildListProps) {
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Confirmation Modal for Archiving Child */}
+      {showDeleteConfirm && childToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h3 className="text-lg font-medium text-gray-900">Archive Child</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Are you sure you want to archive {childToDelete.firstName} {childToDelete.lastName}? 
+              This will hide the child's profile but will not permanently delete their data.
+            </p>
+            <div className="mt-4 flex justify-end space-x-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setChildToDelete(null);
+                }}
+                disabled={archiveChildMutation.isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmArchive}
+                isLoading={archiveChildMutation.isLoading}
+                disabled={!isOnline}
+              >
+                Archive
+              </Button>
+            </div>
+            {!isOnline && (
+               <p className="mt-2 text-xs text-amber-600">Archiving is disabled while offline.</p>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -43,7 +43,10 @@
     "react-hook-form": "^7.56.3",
     "@hookform/resolvers": "^5.0.1",
     "react-router-dom": "^7.6.0",
-    "framer-motion": "^12.12.1"
+    "framer-motion": "^12.12.1",
+    "react-image-crop": "^11.0.10",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
@@ -61,6 +64,8 @@
     "typescript-eslint": "^8.31.1",
     "vite-tsconfig-paths": "^5.1.4",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/bcryptjs": "^3.0.0"
+    "@types/bcryptjs": "^3.0.0",
+    "@types/speakeasy": "^2.0.10",
+    "@types/qrcode": "^1.5.5"
   }
 }

@@ -3,9 +3,15 @@ import { useState } from "react";
 import { DashboardLayout } from "~/components/layouts/DashboardLayout";
 import { useAuthStore } from "~/stores/authStore";
 import { api } from "~/trpc/react";
-import { ProfileDetails } from "~/components/nanny/ProfileDetails";
 import { FamilyLinks } from "~/components/nanny/FamilyLinks";
+import { FamilyRequestAccess } from "~/components/nanny/FamilyRequestAccess";
 import { CertificationManager } from "~/components/nanny/CertificationManager";
+import { ProfileDetail } from "~/components/settings/ProfileDetail";
+import { AccountSecurity } from "~/components/settings/AccountSecurity";
+import { NotificationSettings } from "~/components/settings/NotificationSettings";
+import { PrivacySettings } from "~/components/settings/PrivacySettings";
+import { SyncSettings } from "~/components/settings/SyncSettings";
+import toast from "react-hot-toast";
 
 const nannyNavigation = [
   {
@@ -65,7 +71,7 @@ const nannyNavigation = [
   },
 ];
 
-type ProfileTab = "details" | "families" | "certifications";
+type ProfileTab = "details" | "families" | "certifications" | "security" | "notifications" | "privacy" | "sync";
 
 export const Route = createFileRoute("/nanny/profile/")({
   component: NannyProfile,
@@ -120,13 +126,43 @@ function NannyProfile() {
     
     switch (activeTab) {
       case "details":
-        return <ProfileDetails profile={profileData} onProfileUpdated={() => refetchProfile()} />;
+        return <ProfileDetail profile={profileData} userType="nanny" onProfileUpdated={() => refetchProfile()} />;
       case "families":
-        return <FamilyLinks families={profileData.assignedFamilies} />;
+        return (
+          <div className="space-y-8">
+            <FamilyLinks families={profileData.assignedFamilies || []} />
+            <div className="border-t border-gray-200 pt-6">
+              <FamilyRequestAccess 
+                onRequestSent={() => refetchProfile()} 
+                // availableFamilies might need to be fetched separately or passed if already available
+              />
+            </div>
+          </div>
+        );
       case "certifications":
         return <CertificationManager 
           certifications={profileData.certifications} 
           onCertificationUpdated={() => refetchProfile()} 
+        />;
+      case "security":
+        return <AccountSecurity />;
+      case "notifications":
+        return <NotificationSettings 
+          initialSettings={profileData.user?.notificationSettings}
+          onSettingsUpdated={() => refetchProfile()}
+        />;
+      case "privacy":
+        return <PrivacySettings 
+          initialSettings={{
+            profileVisibility: profileData.user?.profileVisibility || "connected",
+            marketingOptIn: profileData.user?.marketingOptIn || false,
+          }}
+          onSettingsUpdated={() => refetchProfile()}
+        />;
+      case "sync":
+        return <SyncSettings 
+          initialSettings={profileData.user?.settings}
+          onSettingsUpdated={() => refetchProfile()}
         />;
       default:
         return null;
@@ -140,7 +176,7 @@ function NannyProfile() {
     >
       <div className="space-y-6">
         {/* Profile tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 overflow-x-auto">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab("details")}
@@ -150,7 +186,7 @@ function NannyProfile() {
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Personal Details
+              Profile Details
             </button>
             <button
               onClick={() => setActiveTab("families")}
@@ -171,6 +207,46 @@ function NannyProfile() {
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Certifications
+            </button>
+            <button
+              onClick={() => setActiveTab("security")}
+              className={`${
+                activeTab === "security"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Security
+            </button>
+            <button
+              onClick={() => setActiveTab("notifications")}
+              className={`${
+                activeTab === "notifications"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Notifications
+            </button>
+            <button
+              onClick={() => setActiveTab("privacy")}
+              className={`${
+                activeTab === "privacy"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Privacy
+            </button>
+            <button
+              onClick={() => setActiveTab("sync")}
+              className={`${
+                activeTab === "sync"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Sync
             </button>
           </nav>
         </div>

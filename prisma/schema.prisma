@@ -23,6 +23,15 @@ model User {
   role          UserRole
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  displayName   String?
+  pronouns      String?
+  timeZone      String?   @default("UTC")
+  locale        String?   @default("en-US")
+  phoneNumber   String?
+  phoneVerified Boolean   @default(false)
+  profileVisibility String? @default("connected") // public, connected, admin
+  marketingOptIn Boolean   @default(false)
+  lastLoginAt   DateTime?
 
   // Relations
   nannyProfile  NannyProfile?
@@ -30,6 +39,10 @@ model User {
   adminProfile  AdminProfile?
   messages      Message[]
   sentMessages  Message[]  @relation("MessageSender")
+  sessions      UserSession[]
+  twoFactorAuth TwoFactorAuth?
+  settings      UserSettings?
+  notificationSettings UserNotificationSettings?
 }
 
 model NannyProfile {
@@ -43,6 +56,7 @@ model NannyProfile {
   bio               String?
   availability      String?
   profileImageUrl   String?
+  coverImageUrl     String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   
@@ -54,6 +68,7 @@ model NannyProfile {
   hoursLogs         HoursLog[]
   agencyAssignments AgencyNanny[]
   receivedFeedback  Feedback[]
+  familyRequests    FamilyNannyRequest[]
 }
 
 model ParentProfile {
@@ -65,6 +80,7 @@ model ParentProfile {
   phoneNumber     String?
   address         String?
   profileImageUrl String?
+  coverImageUrl   String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -81,6 +97,9 @@ model AdminProfile {
   firstName       String
   lastName        String
   department      String?
+  profileImageUrl String?
+  coverImageUrl   String?
+  bio             String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }
@@ -513,4 +532,84 @@ model CustomMilestone {
   
   // Relations
   childMilestones ChildMilestone[]
+}
+
+model UserSession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceInfo      String?
+  browser         String?
+  ipAddress       String?
+  lastActiveAt    DateTime  @default(now())
+  expiresAt       DateTime
+  isRevoked       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model TwoFactorAuth {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret          String
+  isEnabled       Boolean   @default(false)
+  recoveryCodes   String?   // JSON array of hashed recovery codes
+  lastVerifiedAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model UserSettings {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaCacheSize  Int       @default(100) // in MB
+  autoPurgePolicy Int       @default(14)  // in days
+  syncOnWifiOnly  Boolean   @default(false)
+  lastSyncAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model UserNotificationSettings {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inAppMessages     Boolean   @default(true)
+  inAppObservations Boolean   @default(true)
+  inAppApprovals    Boolean   @default(true)
+  inAppEmergencies  Boolean   @default(true)
+  emailMessages     Boolean   @default(false)
+  emailObservations Boolean   @default(false)
+  emailApprovals    Boolean   @default(true)
+  emailEmergencies  Boolean   @default(true)
+  smsMessages       Boolean   @default(false)
+  smsObservations   Boolean   @default(false)
+  smsApprovals      Boolean   @default(false)
+  smsEmergencies    Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model FamilyNannyRequest {
+  id              String    @id @default(cuid())
+  nannyId         String
+  nanny           NannyProfile @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  familyId        String
+  status          String    // pending, approved, denied
+  message         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SystemSettings {
+  id            String    @id @default(cuid())
+  general       Json?     // JSON string for general configuration
+  security      Json?     // JSON string for security settings
+  notifications Json?     // JSON string for notification settings
+  sync          Json?     // JSON string for sync settings
+  ai            Json?     // JSON string for AI settings
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

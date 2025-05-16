@@ -9,12 +9,26 @@ import { register } from "./procedures/auth/register";
 import { login } from "./procedures/auth/login";
 import { getMe } from "./procedures/auth/getMe";
 import { verifyToken } from "./procedures/auth/verifyToken";
+import { changePassword } from "./procedures/auth/changePassword";
+import { setup2FA } from "./procedures/auth/setup2FA";
+import { verify2FA } from "./procedures/auth/verify2FA";
+import { disable2FA } from "./procedures/auth/disable2FA";
+import { getUserSessions } from "./procedures/auth/getUserSessions";
+import { revokeSession } from "./procedures/auth/revokeSession";
 
 // App procedures
 import { getAIAvailability } from "./procedures/app/getAIAvailability";
 
 // Sync procedures
 import { syncOperation } from "./procedures/sync/syncOperation";
+
+// User procedures
+import { updateNotificationSettings } from "./procedures/user/updateNotificationSettings";
+import { updatePrivacySettings } from "./procedures/user/updatePrivacySettings";
+import { updateSyncSettings } from "./procedures/user/updateSyncSettings";
+import { syncNow } from "./procedures/user/syncNow";
+import { exportUserData } from "./procedures/user/exportUserData";
+import { deleteAccount } from "./procedures/user/deleteAccount";
 
 // Observation procedures
 import { createObservation } from "./procedures/observations/createObservation";
@@ -25,16 +39,20 @@ import { getObservationDetail } from "./procedures/observations/getObservationDe
 import { addObservationComment } from "./procedures/observations/addObservationComment";
 import { updateObservation } from "./procedures/observations/updateObservation";
 import { deleteObservation } from "./procedures/observations/deleteObservation";
+import { getRecentObservations } from "./procedures/observations/getRecentObservations";
 
 // Messaging procedures
 import { sendMessage } from "./procedures/messaging/sendMessage";
 import { getConversations } from "./procedures/messaging/getConversations";
 import { getMessages } from "./procedures/messaging/getMessages";
+import { getAvailableRecipients } from "./procedures/messaging/getAvailableRecipients";
 
 // Nanny profile procedures
 import { getNannyProfile } from "./procedures/nanny/getNannyProfile";
 import { updateNannyProfile } from "./procedures/nanny/updateNannyProfile";
 import { manageCertification } from "./procedures/nanny/manageCertification";
+import { searchFamilies } from "./procedures/nanny/searchFamilies";
+import { requestFamilyAccess } from "./procedures/nanny/requestFamilyAccess";
 
 // Hours Log procedures
 import { getHoursLog } from "./procedures/nanny/getHoursLog";
@@ -79,6 +97,7 @@ import { archiveChild } from "./procedures/parent/archiveChild";
 import { deleteChild } from "./procedures/parent/deleteChild";
 import { addCustomMilestone } from "./procedures/parent/addCustomMilestone";
 import { getMilestoneProgress } from "./procedures/parent/getMilestoneProgress";
+import { getRecentMilestones } from "./procedures/parent/getRecentMilestones";
 
 // Admin procedures
 import { getAdminDashboardStats } from "./procedures/admin/getAdminDashboardStats";
@@ -104,6 +123,13 @@ import { getAgencyNannies } from "./procedures/admin/getAgencyNannies";
 import { assignNannyToAgency } from "./procedures/admin/assignNannyToAgency";
 import { updateNannyAgencyAssignment } from "./procedures/admin/updateNannyAgencyAssignment";
 import { getActivityStream } from "./procedures/admin/getActivityStream";
+import { getSystemSettings } from "./procedures/admin/getSystemSettings";
+import { updateSystemSettings } from "./procedures/admin/updateSystemSettings";
+import { downloadAuditLogs } from "./procedures/admin/downloadAuditLogs";
+import { testEmailConnection } from "./procedures/admin/testEmailConnection";
+import { testSmsConnection } from "./procedures/admin/testSmsConnection";
+import { testPushConnection } from "./procedures/admin/testPushConnection";
+import { testAIConnection } from "./procedures/admin/testAIConnection";
 
 export const appRouter = createTRPCRouter({
   // Auth procedures
@@ -111,12 +137,26 @@ export const appRouter = createTRPCRouter({
   login,
   getMe,
   verifyToken,
+  changePassword,
+  setup2FA,
+  verify2FA,
+  disable2FA,
+  getUserSessions,
+  revokeSession,
   
   // App procedures
   getAIAvailability,
   
   // Sync procedures
   syncOperation,
+  
+  // User procedures
+  updateNotificationSettings,
+  updatePrivacySettings,
+  updateSyncSettings,
+  syncNow,
+  exportUserData,
+  deleteAccount,
   
   // Observation procedures
   createObservation,
@@ -127,16 +167,20 @@ export const appRouter = createTRPCRouter({
   addObservationComment,
   updateObservation,
   deleteObservation,
+  getRecentObservations,
   
   // Messaging procedures
   sendMessage,
   getConversations,
   getMessages,
+  getAvailableRecipients,
   
   // Nanny profile procedures
   getNannyProfile,
   updateNannyProfile,
   manageCertification,
+  searchFamilies,
+  requestFamilyAccess,
   
   // Hours Log procedures
   getHoursLog,
@@ -159,6 +203,7 @@ export const appRouter = createTRPCRouter({
   getFeedbackHistory,
   achieveMilestone,
   updateMilestone,
+  getRecentMilestones,
   // Family Profile procedures
   getFamilyDocuments,
   uploadFamilyDocument,
@@ -201,6 +246,15 @@ export const appRouter = createTRPCRouter({
   assignNannyToAgency,
   updateNannyAgencyAssignment,
   getActivityStream,
+  
+  // Admin System Settings procedures
+  getSystemSettings,
+  updateSystemSettings,
+  downloadAuditLogs,
+  testEmailConnection,
+  testSmsConnection,
+  testPushConnection,
+  testAIConnection,
 });
 
 export type AppRouter = typeof appRouter;

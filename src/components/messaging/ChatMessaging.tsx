@@ -3,6 +3,7 @@ import { api } from "~/trpc/react";
 import { useAuthStore } from "~/stores/authStore";
 import { useAIStore } from "~/stores/aiStore";
 import { MessageForm } from "~/components/messaging/MessageForm";
+import { MessageComposer } from "~/components/messaging/MessageComposer";
 import { Button } from "~/components/ui/Button";
 import { checkAIAvailability } from "~/lib/aiHelpers";
 import toast from "react-hot-toast";
@@ -10,6 +11,7 @@ import toast from "react-hot-toast";
 export function ChatMessaging() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [aiAssistantMode, setAiAssistantMode] = useState<boolean>(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { token, user } = useAuthStore();
   const { isAIAvailable } = useAIStore();
@@ -132,11 +134,24 @@ export function ChatMessaging() {
       <div className="w-full sm:w-80 border-r border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-lg font-medium text-gray-900">Conversations</h2>
-          {unreadMessageCount > 0 && (
-            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
-              {unreadMessageCount}
-            </span>
-          )}
+          <div className="flex items-center space-x-2">
+            {unreadMessageCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {unreadMessageCount}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsComposerOpen(true)}
+              aria-label="New Message"
+            >
+              <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              New
+            </Button>
+          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto">
@@ -491,6 +506,42 @@ export function ChatMessaging() {
           </div>
         )}
       </div>
+      
+      {/* Message Composer Modal */}
+      {isComposerOpen && (
+        <div className="absolute inset-0 z-20 bg-white md:bg-gray-500 md:bg-opacity-75 flex items-center justify-center">
+          <div className="w-full max-w-lg">
+            <MessageComposer
+              onMessageSent={() => {
+                setIsComposerOpen(false);
+                handleMessageSent(); // Existing handler to refresh conversations/messages
+              }}
+              children={childrenData?.children || []}
+              className="shadow-2xl rounded-lg"
+            />
+            {/* Close button for the modal - specific to this modal implementation */}
+             <button 
+                onClick={() => setIsComposerOpen(false)} 
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 md:text-white md:hover:text-gray-200"
+                aria-label="Close new message composer"
+              >
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Floating Action Button for New Message */}
+      <MessageComposer
+        floatingButton={true}
+        onMessageSent={() => {
+          handleMessageSent(); // Existing handler to refresh conversations/messages
+        }}
+        children={childrenData?.children || []}
+      />
     </div>
   );
 }

@@ -77,6 +77,15 @@ export const syncOperation = baseProcedure
         case "ResourceTag":
           await processResourceTagSync(input, user.id);
           break;
+        case "User":
+          await processUserSync(input, user.id);
+          break;
+        case "UserSettings":
+          await processUserSettingsSync(input, user.id);
+          break;
+        case "UserNotificationSettings":
+          await processUserNotificationSettingsSync(input, user.id);
+          break;
         // Add more cases for other models as needed
         default:
           throw new TRPCError({
@@ -959,4 +968,123 @@ async function processResourceTagSync(
       await db.resourceTag.delete({ where: { id: input.recordId } });
       break;
   }
+}
+
+// Helper function to process User model sync operations (for privacy settings)
+async function processUserSync(
+  input: {
+    operationType: "CREATE" | "UPDATE" | "DELETE";
+    recordId: string; // Should be 'current' or the user ID
+    data: Record<string, unknown>;
+  },
+  userId: string
+) {
+  // Only UPDATE is supported for User (for these specific fields)
+  if (input.operationType !== "UPDATE") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Unsupported operation for User model in this context: ${input.operationType}`,
+    });
+  }
+  
+  // Update user privacy settings
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      profileVisibility: input.data.profileVisibility as string | undefined,
+      marketingOptIn: input.data.marketingOptIn as boolean | undefined,
+      displayName: input.data.displayName as string | undefined,
+      pronouns: input.data.pronouns as string | undefined,
+      timeZone: input.data.timeZone as string | undefined,
+      locale: input.data.locale as string | undefined,
+    },
+  });
+}
+
+// Helper function to process UserSettings sync operations
+async function processUserSettingsSync(
+  input: {
+    operationType: "CREATE" | "UPDATE" | "DELETE";
+    recordId: string; // Should be 'current' or the user ID
+    data: Record<string, unknown>;
+  },
+  userId: string
+) {
+  // Only UPDATE is supported for UserSettings
+  if (input.operationType !== "UPDATE") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Unsupported operation for UserSettings: ${input.operationType}`,
+    });
+  }
+  
+  // Update or create user settings
+  await db.userSettings.upsert({
+    where: { userId },
+    update: {
+      mediaCacheSize: input.data.mediaCacheSize as number | undefined,
+      autoPurgePolicy: input.data.autoPurgePolicy as number | undefined,
+      syncOnWifiOnly: input.data.syncOnWifiOnly as boolean | undefined,
+      lastSyncAt: input.data.lastSyncAt ? new Date(input.data.lastSyncAt as string) : undefined,
+    },
+    create: {
+      userId,
+      mediaCacheSize: input.data.mediaCacheSize as number,
+      autoPurgePolicy: input.data.autoPurgePolicy as number,
+      syncOnWifiOnly: input.data.syncOnWifiOnly as boolean,
+      lastSyncAt: input.data.lastSyncAt ? new Date(input.data.lastSyncAt as string) : undefined,
+    },
+  });
+}
+
+// Helper function to process UserNotificationSettings sync operations
+async function processUserNotificationSettingsSync(
+  input: {
+    operationType: "CREATE" | "UPDATE" | "DELETE";
+    recordId: string; // Should be 'current' or the user ID
+    data: Record<string, unknown>;
+  },
+  userId: string
+) {
+  // Only UPDATE is supported for UserNotificationSettings
+  if (input.operationType !== "UPDATE") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Unsupported operation for UserNotificationSettings: ${input.operationType}`,
+    });
+  }
+  
+  // Update or create notification settings
+  await db.userNotificationSettings.upsert({
+    where: { userId },
+    update: {
+      inAppMessages: input.data.inAppMessages as boolean | undefined,
+      inAppObservations: input.data.inAppObservations as boolean | undefined,
+      inAppApprovals: input.data.inAppApprovals as boolean | undefined,
+      inAppEmergencies: input.data.inAppEmergencies as boolean | undefined,
+      emailMessages: input.data.emailMessages as boolean | undefined,
+      emailObservations: input.data.emailObservations as boolean | undefined,
+      emailApprovals: input.data.emailApprovals as boolean | undefined,
+      emailEmergencies: input.data.emailEmergencies as boolean | undefined,
+      smsMessages: input.data.smsMessages as boolean | undefined,
+      smsObservations: input.data.smsObservations as boolean | undefined,
+      smsApprovals: input.data.smsApprovals as boolean | undefined,
+      smsEmergencies: input.data.smsEmergencies as boolean | undefined,
+    },
+    create: {
+      userId,
+      inAppMessages: input.data.inAppMessages as boolean,
+      inAppObservations: input.data.inAppObservations as boolean,
+      inAppApprovals: input.data.inAppApprovals as boolean,
+      inAppEmergencies: input.data.inAppEmergencies as boolean,
+      emailMessages: input.data.emailMessages as boolean,
+      emailObservations: input.data.emailObservations as boolean,
+      emailApprovals: input.data.emailApprovals as boolean,
+      emailEmergencies: input.data.emailEmergencies as boolean,
+      smsMessages: input.data.smsMessages as boolean,
+      smsObservations: input.data.smsObservations as boolean,
+      smsApprovals: input.data.smsApprovals as boolean,
+      smsEmergencies: input.data.smsEmergencies as boolean,
+    },
+  });
 }
