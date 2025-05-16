@@ -13,11 +13,33 @@ export const updateParentProfile = baseProcedure
       phoneNumber: z.string().optional(),
       address: z.string().optional(),
       profileImageUrl: z.string().optional(),
+      familyName: z.string().optional(), // Added
+      contactInfo: z.object({ // Added
+        primaryParent: z.object({
+          name: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().email().optional(),
+          address: z.string().optional(),
+        }).optional(),
+        secondaryParent: z.object({
+          name: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().email().optional(),
+          address: z.string().optional(),
+        }).optional(),
+        emergencyContact: z.object({
+          name: z.string().optional(),
+          relationship: z.string().optional(),
+          phone: z.string().optional(),
+        }).optional(),
+      }).optional(),
       homeDetails: z.object({
         homeType: z.string().optional(),
         numberOfBedrooms: z.number().optional(),
         hasOutdoorSpace: z.boolean().optional(),
         petDetails: z.string().optional(),
+        safetyInstructions: z.string().optional(), // Added
+        routines: z.string().optional(), // Added
         dietaryRestrictions: z.string().optional(),
         householdMembers: z.array(z.object({
           relationship: z.string(),
@@ -64,23 +86,26 @@ export const updateParentProfile = baseProcedure
       },
     });
     
-    // Update family home details if provided
-    if (input.homeDetails) {
+    // Update family home details and contact info if provided
+    if (input.homeDetails || input.contactInfo || input.familyName) {
       if (parentProfile.family) {
         // Update existing family
         await db.family.update({
           where: { id: parentProfile.family.id },
           data: {
-            homeDetails: JSON.stringify(input.homeDetails),
+            ...(input.familyName && { name: input.familyName }),
+            ...(input.homeDetails && { homeDetails: JSON.stringify(input.homeDetails) }),
+            ...(input.contactInfo && { contactInfo: JSON.stringify(input.contactInfo) }),
           },
         });
       } else {
         // Create new family
         await db.family.create({
           data: {
-            name: `${input.firstName} ${input.lastName}'s Family`,
+            name: input.familyName || `${input.firstName} ${input.lastName}'s Family`,
             parentId: parentProfile.id,
-            homeDetails: JSON.stringify(input.homeDetails),
+            ...(input.homeDetails && { homeDetails: JSON.stringify(input.homeDetails) }),
+            ...(input.contactInfo && { contactInfo: JSON.stringify(input.contactInfo) }),
           },
         });
       }

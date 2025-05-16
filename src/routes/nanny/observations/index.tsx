@@ -5,6 +5,7 @@ import { ObservationForm } from "~/components/observations/ObservationForm";
 import { Button } from "~/components/ui/Button";
 import { useAuthStore } from "~/stores/authStore";
 import { api } from "~/trpc/react";
+import { ObservationFeed } from "~/components/observations/ObservationFeed";
 
 const nannyNavigation = [
   {
@@ -70,37 +71,26 @@ export const Route = createFileRoute("/nanny/observations/")({
 
 function NannyObservations() {
   const [showForm, setShowForm] = useState(false);
+  const { token, user } = useAuthStore(); // Assuming user object has a role
   const utils = api.useUtils();
   
-  // State for loading and error handling
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { token } = useAuthStore();
+  // State for filters
+  const [childFilter, setChildFilter] = useState<string | "all">("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState<{ start?: Date, end?: Date }>({});
+  const [tagFilter, setTagFilter] = useState<string>("");
 
-  // Fetch assigned children - in a real implementation, this would be an API endpoint
-  // For now we'll use mock data but structured as if it came from an API
+  // Fetch assigned children for the filter dropdown
   const { data: childrenData, isLoading: isLoadingChildren } = api.getAssignedChildren.useQuery(
     { token: token || "" },
     {
       enabled: !!token,
       onError: (err) => {
-        setError(`Failed to load children: ${err.message}`);
         console.error("Error fetching children:", err);
       },
-      // This is a placeholder until we implement the actual API endpoint
-      placeholderData: {
-        children: [
-          { id: "child1", firstName: "Emma", lastName: "Johnson" },
-          { id: "child2", firstName: "Noah", lastName: "Williams" },
-        ]
-      }
     }
   );
 
-  // Fetch observations with pagination
-  const [selectedChild, setSelectedChild] = useState<string | "all">("all");
-  const [observationCursor, setObservationCursor] = useState<string | undefined>(undefined);
-
+  // Fetch observations with pagination and filters
   const { 
     data: observationsData, 
     isLoading: isLoadingObservations,
@@ -111,85 +101,59 @@ function NannyObservations() {
   } = api.getObservations.useInfiniteQuery(
     { 
       token: token || "",
-      childId: selectedChild !== "all" ? selectedChild : undefined,
+      childId: childFilter !== "all" ? childFilter : undefined,
+      // TODO: Add dateRangeFilter and tagFilter to the query input if API supports it
+      // startDate: dateRangeFilter.start?.toISOString(),
+      // endDate: dateRangeFilter.end?.toISOString(),
+      // tag: tagFilter || undefined,
       limit: 10
     },
     {
       enabled: !!token,
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       onError: (err) => {
-        setError(`Failed to load observations: ${err.message}`);
         console.error("Error fetching observations:", err);
       },
-      // This is a placeholder until we implement the actual API endpoint
-      placeholderData: {
-        pages: [{
-          data: [
-            {
-              id: "obs1",
-              childId: "child1",
-              childName: "Emma Johnson",
-              type: "TEXT",
-              content: "Emma showed great progress with her alphabet today. She can now recognize and name 15 letters!",
-              createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-              aiTags: JSON.stringify(["language development", "literacy", "cognitive"])
-            },
-            {
-              id: "obs2",
-              childId: "child2",
-              childName: "Noah Williams",
-              type: "PHOTO",
-              content: "Noah built this tower with blocks showing excellent fine motor skills and spatial awareness.",
-              createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-              aiTags: JSON.stringify(["physical development", "fine motor", "cognitive"])
-            },
-            {
-              id: "obs3",
-              childId: "child1",
-              childName: "Emma Johnson",
-              type: "TEXT",
-              content: "Emma shared her toys with another child today without prompting. Great social development!",
-              createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
-              aiTags: JSON.stringify(["social development", "emotional", "sharing"])
-            },
-          ],
-          nextCursor: undefined
-        }],
-        pageParams: [null]
-      }
     }
   );
 
-  // Handle observation creation success
   const handleObservationSuccess = () => {
     setShowForm(false);
-    // Invalidate the observations query to refresh the list
-    void utils.getObservations.invalidate();
+    utils.getObservations.invalidate(); // Refresh the list
   };
 
-  // Flatten the observations from all pages
-  const observations = observationsData?.pages.flatMap(page => page.data) || [];
+  const allObservations = observationsData?.pages.flatMap(page => page.data) || [];
   
+  // TODO: Extract unique tags from allObservations for the tag filter dropdown
+  const availableTags = Array.from(
+    new Set(
+      allObservations.flatMap(obs => {
+        try {
+          return obs.aiTags ? JSON.parse(obs.aiTags) : [];
+        } catch {
+          return [];
+        }
+      })
+    )
+  ) as string[];
+
   return (
     <DashboardLayout 
       title="Observations" 
       navigation={nannyNavigation}
     >
       <div className="space-y-6">
-        {/* Actions */}
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-medium text-gray-900">Recent Observations</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Log & View Observations</h2>
           <Button
             onClick={() => setShowForm(!showForm)}
           >
-            {showForm ? "Cancel" : "New Observation"}
+            {showForm ? "Cancel Observation" : "+ New Observation"}
           </Button>
         </div>
         
-        {/* Observation form */}
         {showForm && (
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Observation</h3>
             <ObservationForm 
               onSuccess={handleObservationSuccess}
               children={childrenData?.children || []}
@@ -197,103 +161,29 @@ function NannyObservations() {
           </div>
         )}
         
-        {/* Child filter */}
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center space-x-2">
-            <label htmlFor="child-filter" className="text-sm font-medium text-gray-700">
-              Filter by child:
-            </label>
-            <select
-              id="child-filter"
-              value={selectedChild}
-              onChange={(e) => setSelectedChild(e.target.value)}
-              className="rounded-md border border-gray-300 py-1.5 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All children</option>
-              {childrenData?.children.map((child) => (
-                <option key={child.id} value={child.id}>
-                  {child.firstName} {child.lastName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <ObservationFeed
+          initialObservations={allObservations}
+          loadMoreObservations={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoading={isLoadingObservations && allObservations.length === 0}
+          childFilter={childFilter}
+          setChildFilter={setChildFilter}
+          dateRangeFilter={dateRangeFilter}
+          setDateRangeFilter={setDateRangeFilter}
+          tagFilter={tagFilter}
+          setTagFilter={setTagFilter}
+          availableChildren={childrenData?.children || []}
+          availableTags={availableTags}
+          userRole={user!.role as "NANNY" | "PARENT" | "ADMIN"} // Assert role as it should be defined for a logged-in user
+        />
         
-        {/* Observations list */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="divide-y divide-gray-200">
-            {isLoadingObservations && !observations.length ? (
-              <div className="px-6 py-8 text-center">
-                <div className="inline-block animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
-                <p className="mt-2 text-gray-500">Loading observations...</p>
-              </div>
-            ) : observationsError ? (
-              <div className="px-6 py-8 text-center text-red-500">
-                <p>Error loading observations. Please try again later.</p>
-              </div>
-            ) : observations.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-500">
-                <p>No observations yet. Create your first one!</p>
-              </div>
-            ) : (
-              <>
-                {observations.map((observation) => {
-                  // Parse aiTags if it exists and is a string
-                  const tags = observation.aiTags ? 
-                    (() => {
-                      try { return JSON.parse(observation.aiTags); } 
-                      catch { return []; }
-                    })() : [];
-                    
-                  return (
-                    <div key={observation.id} className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="text-base font-medium text-gray-900">{observation.childName}</h4>
-                          <p className="text-sm text-gray-500">
-                            {new Date(observation.createdAt).toLocaleDateString()} at {new Date(observation.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                            {observation.type}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <p className="text-gray-700">{observation.content}</p>
-                      </div>
-                      
-                      {tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {tags.map((tag: string) => (
-                            <span key={tag} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                
-                {/* Load more button */}
-                {hasNextPage && (
-                  <div className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                      className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
-                    >
-                      {isFetchingNextPage ? 'Loading more...' : 'Load more observations'}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+        {observationsError && (
+           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Error: </strong>
+            <span className="block sm:inline">Failed to load observations. {observationsError.message}</span>
           </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   );

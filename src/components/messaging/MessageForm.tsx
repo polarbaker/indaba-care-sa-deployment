@@ -7,6 +7,7 @@ import { useAuthStore } from "~/stores/authStore";
 import { useSyncStore } from "~/stores/syncStore";
 import { useAIStore } from "~/stores/aiStore";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
 import { checkAIAvailability } from "~/lib/aiHelpers";
 import toast from "react-hot-toast";
 
@@ -14,6 +15,9 @@ const messageSchema = z.object({
   content: z.string().min(1, "Message cannot be empty"),
   childId: z.string().optional(), // Optional reference to a child
   generateSummary: z.boolean().default(false),
+  attachmentType: z.enum(["none", "media", "observation", "milestone"]).default("none").optional(),
+  attachmentUrl: z.string().url().optional().or(z.literal("")), // For media
+  attachmentRefId: z.string().optional(), // For observation/milestone ID
 });
 
 type MessageFormValues = z.infer<typeof messageSchema>;
@@ -28,6 +32,8 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAssistanceEnabled, setIsAssistanceEnabled] = useState(false);
   const [assistedContent, setAssistedContent] = useState<string | null>(null);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { token, user } = useAuthStore();
   const { isOnline, addOperation } = useSyncStore();
   const { isAIAvailable } = useAIStore();
@@ -64,25 +70,30 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
     
     const messageContent = assistedContent || data.content;
     
-    // If summary generation is requested, check AI availability
     if (data.generateSummary && !isAIAvailable) {
-      // Don't block sending the message, just warn about summary
       toast.warning("AI summary generation is not available in demo mode. Your message will be sent without a summary.");
-      // Continue with sending the message but without summary generation
       data.generateSummary = false;
     }
-    
+
+    let attachmentData;
+    if (data.attachmentType && data.attachmentType !== "none") {
+      attachmentData = {
+        type: data.attachmentType,
+        url: data.attachmentType === "media" ? data.attachmentUrl : undefined,
+        refId: (data.attachmentType === "observation" || data.attachmentType === "milestone") ? data.attachmentRefId : undefined,
+      };
+    }
+
     if (isOnline) {
-      // If online, send directly to the server
       sendMessageMutation.mutate({
         token: token!,
         recipientId,
         content: messageContent,
         childId: data.childId,
         generateSummary: data.generateSummary,
+        attachment: attachmentData, // Pass attachment data
       });
     } else {
-      // If offline, store in sync queue
       try {
         addOperation({
           operationType: "CREATE",
@@ -92,6 +103,8 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
             recipientId,
             content: messageContent,
             childId: data.childId,
+            // Attachment data needs to be stringified or handled by sync process
+            attachment: attachmentData ? JSON.stringify(attachmentData) : undefined,
           },
         });
         
@@ -182,8 +195,73 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
         )}
       </div>
       
+      {/* Attachment options */}
+      <div className="mt-2 space-y-2">
+        <label className="block text-xs font-medium text-gray-700">Attach (Optional)</label>
+        <div className="flex items-center space-x-4">
+          <select
+            {...register("attachmentType")}
+            className="rounded-md border border-gray-300 py-1.5 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            onChange={(e) => {
+              setValue("attachmentType", e.target.value as "none" | "media" | "observation" | "milestone");
+              setValue("attachmentUrl", "");
+              setValue("attachmentRefId", "");
+            }}
+          >
+            <option value="none">None</option>
+            <option value="media">Media (Photo/Video/Audio)</option>
+            <option value="observation">Link to Observation</option>
+            <option value="milestone">Link to Milestone</option>
+          </select>
+
+          {watch("attachmentType") === "media" && (
+            <div className="flex-1">
+              <input 
+                type="file" 
+                className="text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    // Simulate upload and set URL
+                    setIsUploadingAttachment(true);
+                    setUploadProgress(0);
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                      progress += 20;
+                      setUploadProgress(progress);
+                      if (progress >= 100) {
+                        clearInterval(interval);
+                        setValue("attachmentUrl", `https://storage.example.com/media/${file.name}`);
+                        setIsUploadingAttachment(false);
+                        toast.success(`${file.name} attached (simulated).`);
+                      }
+                    }, 200);
+                  }
+                }}
+                disabled={isUploadingAttachment}
+              />
+              {isUploadingAttachment && <p className="text-xs text-blue-600 mt-1">Uploading: {uploadProgress}%</p>}
+              {watch("attachmentUrl") && !isUploadingAttachment && <p className="text-xs text-green-600 mt-1">File attached: {watch("attachmentUrl")?.split('/').pop()}</p>}
+            </div>
+          )}
+
+          {(watch("attachmentType") === "observation" || watch("attachmentType") === "milestone") && (
+            <div className="flex-1">
+              <Input
+                type="text"
+                placeholder={`Enter ${watch("attachmentType")} ID or link`}
+                {...register("attachmentRefId")}
+                className="py-1 text-sm"
+              />
+            </div>
+          )}
+        </div>
+        {errors.attachmentUrl && <p className="mt-1 text-sm text-red-600">{errors.attachmentUrl.message}</p>}
+        {errors.attachmentRefId && <p className="mt-1 text-sm text-red-600">{errors.attachmentRefId.message}</p>}
+      </div>
+
       {/* Options */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:space-x-4 space-y-4 sm:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:space-x-4 space-y-4 sm:space-y-0 pt-2">
         <div className="flex items-center space-x-4">
           {/* AI assistance button - only show if AI is available */}
           {isAIAvailable && (

@@ -15,6 +15,11 @@ export const sendMessage = baseProcedure
       encryptedContent: z.string().optional(),
       childId: z.string().optional(), // Optional reference to a child
       generateSummary: z.boolean().default(false), // Whether to generate an AI summary
+      attachment: z.object({ // Added
+        type: z.enum(["media", "observation", "milestone"]),
+        url: z.string().url().optional(),
+        refId: z.string().optional(), // For observation or milestone ID
+      }).optional(),
     })
   )
   .mutation(async ({ input }) => {
@@ -40,8 +45,22 @@ export const sendMessage = baseProcedure
         encryptedContent: input.encryptedContent,
         senderId: user.id,
         recipientId: input.recipientId,
+        childId: input.childId, // Save childId if provided
       },
     });
+
+    // Handle attachment if provided
+    if (input.attachment) {
+      await db.messageAttachment.create({
+        data: {
+          messageId: message.id,
+          type: input.attachment.type,
+          url: input.attachment.type === "media" ? input.attachment.url : null,
+          observationId: input.attachment.type === "observation" ? input.attachment.refId : null,
+          milestoneId: input.attachment.type === "milestone" ? input.attachment.refId : null,
+        }
+      });
+    }
     
     // Generate AI summary if requested, a child is specified, and AI is available
     if (input.generateSummary && input.childId && isAIAvailable()) {

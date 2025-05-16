@@ -30,9 +30,19 @@ type Milestone = {
   resources: MilestoneResource[];
 };
 
+type CustomMilestone = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  ageRangeStart?: number;
+  ageRangeEnd?: number;
+};
+
 type AchievedMilestone = {
   id: string;
   milestone: Milestone;
+  customMilestone?: CustomMilestone;
   achievedDate: Date | null;
   notes: string | null;
   resources: MilestoneResource[];
@@ -57,13 +67,25 @@ const milestoneSchema = z.object({
   achievedDate: z.string().optional(),
 });
 
+const customMilestoneSchema = z.object({
+  name: z.string().min(1, "Milestone name is required"),
+  description: z.string().min(1, "Description is required"),
+  category: z.string().min(1, "Category is required"),
+  ageRangeStart: z.preprocess(val => Number(val), z.number().min(0).optional()),
+  ageRangeEnd: z.preprocess(val => Number(val), z.number().min(0).optional()),
+});
+
 type MilestoneFormValues = z.infer<typeof milestoneSchema>;
+type CustomMilestoneFormValues = z.infer<typeof customMilestoneSchema>;
 
 export function DevelopmentTracker() {
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [selectedCustomMilestone, setSelectedCustomMilestone] = useState<CustomMilestone | null>(null); // For editing custom
   const [isEditing, setIsEditing] = useState(false);
   const [isAchieving, setIsAchieving] = useState(false);
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [isEditingCustom, setIsEditingCustom] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { token } = useAuthStore();
   const { isOnline, addOperation } = useSyncStore();
@@ -111,13 +133,10 @@ export function DevelopmentTracker() {
   // Add these tRPC mutation hooks
   const achieveMilestoneMutation = api.achieveMilestone.useMutation({
     onSuccess: () => {
-      toast.success(`Milestone "${selectedMilestone?.name}" marked as achieved!`);
-      
-      // Reset state
+      toast.success(`Milestone "${selectedMilestone?.name || selectedCustomMilestone?.name}" marked as achieved!`);
       setIsAchieving(false);
       setSelectedMilestone(null);
-      
-      // Refetch milestones to update the UI
+      setSelectedCustomMilestone(null);
       refetchMilestones();
     },
     onError: (error) => {
@@ -128,13 +147,10 @@ export function DevelopmentTracker() {
 
   const updateMilestoneMutation = api.updateMilestone.useMutation({
     onSuccess: () => {
-      toast.success(`Milestone "${selectedMilestone?.name}" updated!`);
-      
-      // Reset state
+      toast.success(`Milestone "${selectedMilestone?.name || selectedCustomMilestone?.name}" updated!`);
       setIsEditing(false);
       setSelectedMilestone(null);
-      
-      // Refetch milestones to update the UI
+      setSelectedCustomMilestone(null);
       refetchMilestones();
     },
     onError: (error) => {
@@ -142,8 +158,18 @@ export function DevelopmentTracker() {
       setIsSubmitting(false);
     }
   });
+
+  const addCustomMilestoneMutation = api.addCustomMilestone.useMutation({ // New mutation
+    onSuccess: () => {
+      toast.success("Custom milestone added successfully!");
+      setIsAddingCustom(false);
+      customMilestoneForm.reset();
+      refetchMilestones(); // Refetch to include the new custom milestone
+    },
+    onError: (error) => toast.error(`Failed to add custom milestone: ${error.message}`),
+  });
   
-  // Initialize form
+  // Initialize form for standard milestones
   const {
     register,
     handleSubmit,
@@ -153,32 +179,44 @@ export function DevelopmentTracker() {
   } = useForm<MilestoneFormValues>({
     resolver: zodResolver(milestoneSchema)
   });
+
+  // Initialize form for custom milestones
+  const customMilestoneForm = useForm<CustomMilestoneFormValues>({
+    resolver: zodResolver(customMilestoneSchema),
+  });
   
   // Find achieved milestone data for the selected milestone
   const achievedMilestoneData = selectedMilestone ? 
-    milestonesData?.achievedMilestones.find(am => am.milestone.id === selectedMilestone.id) : 
+    milestonesData?.achievedMilestones.find(am => am.milestone?.id === selectedMilestone.id) : 
+    selectedCustomMilestone ?
+    milestonesData?.achievedMilestones.find(am => am.customMilestone?.id === selectedCustomMilestone.id) :
     null;
   
   // Handle milestone achieved
-  const handleMilestoneAchieved = (milestone: Milestone) => {
-    setSelectedMilestone(milestone);
+  const handleMilestoneAchieved = (milestone: Milestone | CustomMilestone, isCustom: boolean) => {
+    if (isCustom) {
+      setSelectedCustomMilestone(milestone as CustomMilestone);
+      setSelectedMilestone(null);
+    } else {
+      setSelectedMilestone(milestone as Milestone);
+      setSelectedCustomMilestone(null);
+    }
     setIsAchieving(true);
     setIsEditing(false);
-    
-    // Reset form
-    reset({
-      notes: "",
-      achievedDate: new Date().toISOString().split('T')[0]
-    });
+    reset({ notes: "", achievedDate: new Date().toISOString().split('T')[0] });
   };
   
   // Handle milestone edit
   const handleMilestoneEdit = (achievedMilestone: AchievedMilestone) => {
-    setSelectedMilestone(achievedMilestone.milestone);
+    if (achievedMilestone.milestone) {
+      setSelectedMilestone(achievedMilestone.milestone);
+      setSelectedCustomMilestone(null);
+    } else if (achievedMilestone.customMilestone) {
+      setSelectedCustomMilestone(achievedMilestone.customMilestone);
+      setSelectedMilestone(null);
+    }
     setIsAchieving(false);
     setIsEditing(true);
-    
-    // Set form values
     reset({
       notes: achievedMilestone.notes || "",
       achievedDate: achievedMilestone.achievedDate 
@@ -186,28 +224,38 @@ export function DevelopmentTracker() {
         : new Date().toISOString().split('T')[0]
     });
   };
+
+  const onSubmitCustomMilestone = (data: CustomMilestoneFormValues) => {
+    if (!selectedChild) {
+      toast.error("Please select a child first.");
+      return;
+    }
+    addCustomMilestoneMutation.mutate({
+      token: token!,
+      childId: selectedChild, // Optional: link custom milestone to a child
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      // ageRangeStart and ageRangeEnd are optional for custom milestones in this setup
+    });
+  };
   
   // Handle form submission for achieving a milestone
   const onSubmitAchieve = (data: MilestoneFormValues) => {
-    if (!selectedChild || !selectedMilestone) return;
+    if (!selectedChild || (!selectedMilestone && !selectedCustomMilestone)) return;
     setIsSubmitting(true);
     
-    // Format data
     const milestoneData = {
       childId: selectedChild,
-      milestoneId: selectedMilestone.id,
+      milestoneId: selectedMilestone?.id,
+      customMilestoneId: selectedCustomMilestone?.id,
       achievedDate: data.achievedDate ? new Date(data.achievedDate) : new Date(),
       notes: data.notes || null
     };
     
     if (isOnline) {
-      // If online, use the mutation
-      achieveMilestoneMutation.mutate({ 
-        token: token || "", 
-        ...milestoneData 
-      });
+      achieveMilestoneMutation.mutate({ token: token || "", ...milestoneData });
     } else {
-      // If offline, store in sync queue
       try {
         addOperation({
           operationType: "CREATE",
@@ -216,17 +264,16 @@ export function DevelopmentTracker() {
           data: {
             childId: milestoneData.childId,
             milestoneId: milestoneData.milestoneId,
+            customMilestoneId: milestoneData.customMilestoneId,
             achievedDate: milestoneData.achievedDate.toISOString(),
             notes: milestoneData.notes,
             createdAt: new Date().toISOString()
           }
         });
-        
-        toast.success(`Milestone "${selectedMilestone.name}" marked as achieved and will sync when back online!`);
-        
-        // Reset state
+        toast.success(`Milestone marked as achieved and will sync when back online!`);
         setIsAchieving(false);
         setSelectedMilestone(null);
+        setSelectedCustomMilestone(null);
         setIsSubmitting(false);
       } catch (error) {
         toast.error("Failed to save milestone achievement offline");
@@ -237,10 +284,9 @@ export function DevelopmentTracker() {
   
   // Handle form submission for editing a milestone
   const onSubmitEdit = (data: MilestoneFormValues) => {
-    if (!selectedChild || !selectedMilestone || !achievedMilestoneData) return;
+    if (!selectedChild || (!selectedMilestone && !selectedCustomMilestone) || !achievedMilestoneData) return;
     setIsSubmitting(true);
     
-    // Format data
     const milestoneData = {
       id: achievedMilestoneData.id,
       achievedDate: data.achievedDate ? new Date(data.achievedDate) : null,
@@ -248,13 +294,8 @@ export function DevelopmentTracker() {
     };
     
     if (isOnline) {
-      // If online, use the mutation
-      updateMilestoneMutation.mutate({ 
-        token: token || "", 
-        ...milestoneData 
-      });
+      updateMilestoneMutation.mutate({ token: token || "", ...milestoneData });
     } else {
-      // If offline, store in sync queue
       try {
         addOperation({
           operationType: "UPDATE",
@@ -266,12 +307,10 @@ export function DevelopmentTracker() {
             updatedAt: new Date().toISOString()
           }
         });
-        
-        toast.success(`Milestone "${selectedMilestone.name}" updated and will sync when back online!`);
-        
-        // Reset state
+        toast.success(`Milestone updated and will sync when back online!`);
         setIsEditing(false);
         setSelectedMilestone(null);
+        setSelectedCustomMilestone(null);
         setIsSubmitting(false);
       } catch (error) {
         toast.error("Failed to update milestone offline");
@@ -284,8 +323,12 @@ export function DevelopmentTracker() {
   const handleCancel = () => {
     setIsAchieving(false);
     setIsEditing(false);
+    setIsAddingCustom(false);
+    setIsEditingCustom(false);
     setSelectedMilestone(null);
+    setSelectedCustomMilestone(null);
     reset();
+    customMilestoneForm.reset();
   };
   
   // Format date for display
@@ -330,6 +373,36 @@ export function DevelopmentTracker() {
         </div>
       </div>
       
+      {/* Progress Dashboard - Conceptual */}
+      {milestonesData && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">Progress Dashboard</h3>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            {/* TODO: Implement actual progress calculation and display */}
+            <p className="text-sm text-gray-500">Progress by domain (e.g., Motor Skills: 75%, Language: 60%) will be shown here.</p>
+            <p className="text-sm text-gray-500 mt-2">Upcoming milestone reminders will appear here.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Visual Timeline - Conceptual */}
+      {milestonesData && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">Milestone Timeline</h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Visual representation of milestones by age.
+            </p>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            {/* TODO: Implement actual visual timeline (e.g., using a chart library or custom CSS) */}
+            <p className="text-sm text-gray-500">A visual timeline of milestones will be displayed here.</p>
+          </div>
+        </div>
+      )}
+      
       {/* Child selector */}
       <div>
         <label htmlFor="child-select" className="block text-sm font-medium text-gray-700 mb-1">
@@ -347,8 +420,10 @@ export function DevelopmentTracker() {
             onChange={(e) => {
               setSelectedChild(e.target.value);
               setSelectedMilestone(null);
+              setSelectedCustomMilestone(null);
               setIsEditing(false);
               setIsAchieving(false);
+              setIsAddingCustom(false);
             }}
           >
             {childrenData.children.map((child) => (
@@ -389,15 +464,54 @@ export function DevelopmentTracker() {
             </div>
           </div>
           
+          {/* Add Custom Milestone Form */}
+          {isAddingCustom && (
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+              <div className="px-4 py-5 sm:px-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Add Custom Milestone</h3>
+              </div>
+              <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+                <form onSubmit={customMilestoneForm.handleSubmit(onSubmitCustomMilestone)} className="space-y-4">
+                  <Input label="Milestone Name" {...customMilestoneForm.register("name")} error={customMilestoneForm.formState.errors.name?.message} />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea {...customMilestoneForm.register("description")} rows={3} className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full" />
+                    {customMilestoneForm.formState.errors.description && <p className="mt-1 text-sm text-red-600">{customMilestoneForm.formState.errors.description.message}</p>}
+                  </div>
+                  <Input label="Category (e.g., Cognitive, Physical)" {...customMilestoneForm.register("category")} error={customMilestoneForm.formState.errors.category?.message} />
+                  {/* Optional age range for custom milestones */}
+                  {/* <Input label="Typical Age Start (months, optional)" type="number" {...customMilestoneForm.register("ageRangeStart")} /> */}
+                  {/* <Input label="Typical Age End (months, optional)" type="number" {...customMilestoneForm.register("ageRangeEnd")} /> */}
+                  <div className="flex justify-end space-x-3">
+                    <Button type="button" variant="secondary" onClick={handleCancel}>Cancel</Button>
+                    <Button type="submit" isLoading={customMilestoneForm.formState.isSubmitting}>Add Milestone</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Button to toggle custom milestone form */}
+          {!isAddingCustom && !isEditing && !isAchieving && selectedChild && (
+             <div className="mt-6 text-right">
+                <Button variant="outline" onClick={() => setIsAddingCustom(true)}>
+                  <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Add Custom Milestone
+                </Button>
+            </div>
+          )}
+          
           {/* Milestone form */}
-          {(isEditing || isAchieving) && selectedMilestone && (
+          {(isEditing || isAchieving) && (selectedMilestone || selectedCustomMilestone) && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg">
               <div className="px-4 py-5 sm:px-6">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">
                   {isAchieving ? "Mark Milestone as Achieved" : "Edit Milestone"}
                 </h3>
                 <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  {selectedMilestone.name} ({selectedMilestone.category})
+                  {selectedMilestone?.name || selectedCustomMilestone?.name} ({(selectedMilestone || selectedCustomMilestone)?.category})
                 </p>
               </div>
               <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
@@ -569,13 +683,14 @@ export function DevelopmentTracker() {
                         </div>
                         <Button
                           type="button"
-                          onClick={() => handleMilestoneAchieved(milestone)}
+                          onClick={() => handleMilestoneAchieved(milestone, false)}
                         >
                           Achieved
                         </Button>
                       </div>
                     </li>
                   ))}
+                  {/* TODO: Display upcoming custom milestones, if any, for the selected child */}
                 </ul>
               )}
             </div>

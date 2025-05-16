@@ -91,12 +91,16 @@ model Family {
   parentId        String    @unique
   parent          ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
   homeDetails     String?   // JSON string with home environment details
+  contactInfo     String?   // JSON string with contact info for each parent
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   // Relations
   children        Child[]
   nannies         FamilyNanny[]
+  documents       FamilyDocument[]
+  preferences     FamilyPreference[]
+  invitations     ParentInvitation[]
 }
 
 model Child {
@@ -107,11 +111,15 @@ model Child {
   gender          String?
   medicalInfo     String?   // JSON string with medical information
   allergies       String?
+  favoriteActivities String? // JSON array of favorite activities
+  sleepRoutine    String?   // JSON string with sleep routine details
+  eatingRoutine   String?   // JSON string with eating routine details
   parentId        String
   parent          ParentProfile @relation(fields: [parentId], references: [id])
   familyId        String?
   family          Family?   @relation(fields: [familyId], references: [id])
   profileImageUrl String?
+  isArchived      Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -119,6 +127,9 @@ model Child {
   observations    Observation[]
   milestones      ChildMilestone[]
   feedback        Feedback[]
+  schedules       ChildSchedule[]
+  media           ChildMedia[]
+  customMilestones CustomMilestone[]
 }
 
 model FamilyNanny {
@@ -158,6 +169,9 @@ model Observation {
   aiTags          String?         // JSON array of AI-generated tags
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  comments        ObservationComment[]
 }
 
 model Message {
@@ -170,8 +184,12 @@ model Message {
   recipient       User      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
   isRead          Boolean   @default(false)
   aiSummary       String?   // AI-generated summary
+  childId         String?   // Optional reference to a child
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  attachments     MessageAttachment[]
 }
 
 model Certification {
@@ -252,14 +270,17 @@ model ChildMilestone {
   id              String    @id @default(cuid())
   childId         String
   child           Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
-  milestoneId     String
-  milestone       Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  milestoneId     String?
+  milestone       Milestone? @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  customMilestoneId String?
+  customMilestone CustomMilestone? @relation(fields: [customMilestoneId], references: [id], onDelete: Cascade)
   achievedDate    DateTime?
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   @@unique([childId, milestoneId])
+  @@unique([childId, customMilestoneId])
 }
 
 model MilestoneResource {
@@ -394,4 +415,102 @@ model Feedback {
   status          String    // pending, acknowledged, responded
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model FamilyDocument {
+  id              String    @id @default(cuid())
+  familyId        String
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  name            String
+  type            String    // e.g., "emergency_contact", "care_agreement", "medical_form"
+  fileUrl         String
+  description     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model FamilyPreference {
+  id              String    @id @default(cuid())
+  familyId        String
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  carePreferences String?   // JSON string with care preferences
+  dietaryRestrictions String?
+  notificationSettings String? // JSON string with notification settings
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ParentInvitation {
+  id              String    @id @default(cuid())
+  familyId        String
+  family          Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  email           String
+  role            String    // full or view-only
+  status          String    // pending, accepted, expired
+  token           String    @unique
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ChildSchedule {
+  id              String    @id @default(cuid())
+  childId         String
+  child           Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  type            String    // e.g., "meal", "nap", "play", "activity"
+  name            String
+  description     String?
+  startTime       String?   // Time in 24-hour format (HH:MM)
+  duration        Int?      // Duration in minutes
+  daysOfWeek      String?   // JSON array of days (e.g., ["Monday", "Wednesday", "Friday"])
+  order           Int       // For ordering routines
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ChildMedia {
+  id              String    @id @default(cuid())
+  childId         String
+  child           Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  type            String    // photo, video, audio
+  url             String
+  description     String?
+  uploadedById    String    // User ID who uploaded
+  createdAt       DateTime  @default(now())
+}
+
+model ObservationComment {
+  id              String    @id @default(cuid())
+  observationId   String
+  observation     Observation @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  userId          String
+  content         String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model MessageAttachment {
+  id              String    @id @default(cuid())
+  messageId       String
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  type            String    // media, observation, milestone
+  url             String?
+  observationId   String?
+  milestoneId     String?
+  createdAt       DateTime  @default(now())
+}
+
+model CustomMilestone {
+  id              String    @id @default(cuid())
+  name            String
+  description     String
+  category        String
+  createdById     String    // User ID who created it
+  childId         String?   // Optional: if specific to a child
+  child           Child?    @relation(fields: [childId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  childMilestones ChildMilestone[]
 }

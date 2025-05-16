@@ -32,7 +32,18 @@ export const updateChild = baseProcedure
         symptoms: z.array(z.string()).optional(),
         treatment: z.string().optional()
       })).optional(),
-      profileImageUrl: z.string().optional()
+      profileImageUrl: z.string().optional(),
+      favoriteActivities: z.array(z.string()).optional(), // Added
+      sleepRoutine: z.object({ // Added - Assuming a structured object
+        bedtime: z.string().optional(),
+        napTimes: z.array(z.string()).optional(),
+        notes: z.string().optional(),
+      }).optional(),
+      eatingRoutine: z.object({ // Added - Assuming a structured object
+        mealTimes: z.array(z.object({ name: z.string(), time: z.string() })).optional(),
+        dietaryPreferences: z.string().optional(),
+        notes: z.string().optional(),
+      }).optional(),
     })
   )
   .mutation(async ({ input }) => {
@@ -78,6 +89,9 @@ export const updateChild = baseProcedure
         medicalInfo: input.medicalInfo ? JSON.stringify(input.medicalInfo) : undefined,
         allergies: input.allergies ? JSON.stringify(input.allergies) : undefined,
         profileImageUrl: input.profileImageUrl,
+        favoriteActivities: input.favoriteActivities ? JSON.stringify(input.favoriteActivities) : undefined, // Added
+        sleepRoutine: input.sleepRoutine ? JSON.stringify(input.sleepRoutine) : undefined, // Added
+        eatingRoutine: input.eatingRoutine ? JSON.stringify(input.eatingRoutine) : undefined, // Added
       },
     });
     

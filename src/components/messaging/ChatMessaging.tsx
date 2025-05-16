@@ -1,6 +1,3 @@
-// This file is being moved to src/components/messaging/ChatMessaging.tsx
-// Content remains the same for now.
-
 import { useState, useEffect, useRef } from "react";
 import { api } from "~/trpc/react";
 import { useAuthStore } from "~/stores/authStore";

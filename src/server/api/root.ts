@@ -21,6 +21,10 @@ import { createObservation } from "./procedures/observations/createObservation";
 import { getChildObservations } from "./procedures/observations/getChildObservations";
 import { getObservations } from "./procedures/observations/getObservations";
 import { getAssignedChildren } from "./procedures/observations/getAssignedChildren";
+import { getObservationDetail } from "./procedures/observations/getObservationDetail";
+import { addObservationComment } from "./procedures/observations/addObservationComment";
+import { updateObservation } from "./procedures/observations/updateObservation";
+import { deleteObservation } from "./procedures/observations/deleteObservation";
 
 // Messaging procedures
 import { sendMessage } from "./procedures/messaging/sendMessage";
@@ -42,6 +46,28 @@ import { updateFeedback } from "./procedures/parent/updateFeedback";
 import { getFeedbackHistory } from "./procedures/parent/getFeedbackHistory";
 import { achieveMilestone } from "./procedures/parent/achieveMilestone";
 import { updateMilestone } from "./procedures/parent/updateMilestone";
+import { 
+  getFamilyDocuments, 
+  uploadFamilyDocument, 
+  deleteFamilyDocument 
+} from "./procedures/parent/familyDocuments";
+import { 
+  getFamilyUsers, 
+  inviteParent, 
+  resendParentInvitation, 
+  cancelParentInvitation 
+} from "./procedures/parent/familyUsers";
+import { 
+  getFamilyPreferences, 
+  updateFamilyPreferences 
+} from "./procedures/parent/familyPreferences";
+import { addChild } from "./procedures/parent/addChild";
+import { getChildrenOverview } from "./procedures/parent/getChildrenOverview";
+import { getChildDetails } from "./procedures/parent/getChildDetails";
+import { archiveChild } from "./procedures/parent/archiveChild";
+import { deleteChild } from "./procedures/parent/deleteChild";
+import { addCustomMilestone } from "./procedures/parent/addCustomMilestone";
+import { getMilestoneProgress } from "./procedures/parent/getMilestoneProgress";
 
 // Admin procedures
 import { getAdminDashboardStats } from "./procedures/admin/getAdminDashboardStats";
@@ -66,6 +92,7 @@ import { updateAgency } from "./procedures/admin/updateAgency";
 import { getAgencyNannies } from "./procedures/admin/getAgencyNannies";
 import { assignNannyToAgency } from "./procedures/admin/assignNannyToAgency";
 import { updateNannyAgencyAssignment } from "./procedures/admin/updateNannyAgencyAssignment";
+import { getActivityStream } from "./procedures/admin/getActivityStream";
 
 export const appRouter = createTRPCRouter({
   // Auth procedures
@@ -85,6 +112,10 @@ export const appRouter = createTRPCRouter({
   getChildObservations,
   getObservations,
   getAssignedChildren,
+  getObservationDetail,
+  addObservationComment,
+  updateObservation,
+  deleteObservation,
   
   // Messaging procedures
   sendMessage,
@@ -106,6 +137,23 @@ export const appRouter = createTRPCRouter({
   getFeedbackHistory,
   achieveMilestone,
   updateMilestone,
+  // Family Profile procedures
+  getFamilyDocuments,
+  uploadFamilyDocument,
+  deleteFamilyDocument,
+  getFamilyUsers,
+  inviteParent,
+  resendParentInvitation,
+  cancelParentInvitation,
+  getFamilyPreferences,
+  updateFamilyPreferences,
+  addChild,
+  getChildrenOverview,
+  getChildDetails,
+  archiveChild,
+  deleteChild,
+  addCustomMilestone,
+  getMilestoneProgress,
   
   // Admin procedures
   getAdminDashboardStats,
@@ -130,6 +178,7 @@ export const appRouter = createTRPCRouter({
   getAgencyNannies,
   assignNannyToAgency,
   updateNannyAgencyAssignment,
+  getActivityStream,
 });
 
 export type AppRouter = typeof appRouter;

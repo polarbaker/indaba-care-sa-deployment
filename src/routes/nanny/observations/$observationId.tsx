@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { DashboardLayout } from "~/components/layouts/DashboardLayout";
-import { ChatMessaging } from "~/components/messaging/ChatMessaging";
+import { useAuthStore } from "~/stores/authStore";
+import { ObservationDetail } from "~/components/observations/ObservationDetail";
 
 const nannyNavigation = [
   {
@@ -60,17 +61,30 @@ const nannyNavigation = [
   },
 ];
 
-export const Route = createFileRoute("/nanny/messages/")({
-  component: NannyMessages,
+export const Route = createFileRoute("/nanny/observations/$observationId")({
+  component: NannyObservationDetailView,
 });
 
-function NannyMessages() {
+function NannyObservationDetailView() {
+  const { observationId } = useParams({ from: "/nanny/observations/$observationId" });
+  const { user } = useAuthStore(); // Get the full user object
+
+  if (!user) {
+    // Handle case where user is not authenticated, though routes should protect this
+    return (
+       <DashboardLayout title="Observation Detail" navigation={nannyNavigation}>
+        <div className="p-4 text-red-600">User not authenticated.</div>
+      </DashboardLayout>
+    );
+  }
+  
+  // The ObservationDetail component now handles its own loading and error states
   return (
     <DashboardLayout 
-      title="Messages" 
+      title="Observation Detail" 
       navigation={nannyNavigation}
     >
-      <ChatMessaging />
+      <ObservationDetail observationId={observationId} currentUser={user} />
     </DashboardLayout>
   );
 }

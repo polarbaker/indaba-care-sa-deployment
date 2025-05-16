@@ -1,13 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardLayout } from "~/components/layouts/DashboardLayout";
-import { ProfileDetails } from "~/components/parent/ProfileDetails";
-import { ChildList } from "~/components/parent/ChildList";
-import { NannyView } from "~/components/parent/NannyView";
-import { ChatMessaging } from "~/components/messaging/ChatMessaging";
-import { DevelopmentTracker } from "~/components/parent/DevelopmentTracker";
-import { ResourcesHub } from "~/components/parent/ResourcesHub";
-import { FeedbackForm } from "~/components/parent/FeedbackForm";
+import { FamilyDetails } from "~/components/parent/FamilyDetails";
+import { FamilyDocuments } from "~/components/parent/FamilyDocuments";
+import { ParentAccounts } from "~/components/parent/ParentAccounts";
+import { FamilyPreferences } from "~/components/parent/FamilyPreferences";
 import { useAuthStore } from "~/stores/authStore";
 import { api } from "~/trpc/react";
 
@@ -22,11 +19,11 @@ const parentNavigation = [
     ),
   },
   {
-    name: "My Profile",
-    to: "/parent/profile/",
+    name: "Family Profile",
+    to: "/parent/family/",
     icon: (className: string) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
       </svg>
     ),
   },
@@ -67,19 +64,28 @@ const parentNavigation = [
       </svg>
     ),
   },
+  {
+    name: "Resources Hub",
+    to: "/parent/resources/",
+    icon: (className: string) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+      </svg>
+    ),
+  },
 ];
 
-type ProfileTab = "profile" | "nanny" | "chat" | "development" | "resources" | "feedback";
+type FamilyProfileTab = "details" | "documents" | "accounts" | "preferences";
 
-export const Route = createFileRoute("/parent/profile/")({
-  component: ParentProfile,
+export const Route = createFileRoute("/parent/family/")({
+  component: FamilyProfile,
 });
 
-function ParentProfile() {
-  const [activeTab, setActiveTab] = useState<ProfileTab>("profile");
+function FamilyProfile() {
+  const [activeTab, setActiveTab] = useState<FamilyProfileTab>("details");
   const { token } = useAuthStore();
   
-  // Placeholder for profile data loading
+  // Fetch family profile data
   const { 
     data: profileData, 
     isLoading: isLoadingProfile,
@@ -123,33 +129,34 @@ function ParentProfile() {
     }
     
     switch (activeTab) {
-      case "profile":
+      case "details":
         return (
-          <div className="space-y-8">
-            <ProfileDetails 
-              profile={profileData} 
-              onProfileUpdated={() => refetchProfile()}
-            />
-            <ChildList 
-              children={profileData.children} 
-              onChildUpdated={() => refetchProfile()}
-            />
-          </div>
-        );
-      case "nanny":
-        return (
-          <NannyView 
-            nannies={profileData.family?.nannies || []} 
+          <FamilyDetails 
+            profile={profileData} 
+            onProfileUpdated={() => refetchProfile()}
           />
         );
-      case "chat":
-        return <ChatMessaging />;
-      case "development":
-        return <DevelopmentTracker />;
-      case "resources":
-        return <ResourcesHub />;
-      case "feedback":
-        return <FeedbackForm />;
+      case "documents":
+        return (
+          <FamilyDocuments
+            family={profileData.family}
+            onDocumentsUpdated={() => refetchProfile()}
+          />
+        );
+      case "accounts":
+        return (
+          <ParentAccounts
+            family={profileData.family}
+            onAccountsUpdated={() => refetchProfile()}
+          />
+        );
+      case "preferences":
+        return (
+          <FamilyPreferences
+            family={profileData.family}
+            onPreferencesUpdated={() => refetchProfile()}
+          />
+        );
       default:
         return null;
     }
@@ -157,7 +164,7 @@ function ParentProfile() {
   
   return (
     <DashboardLayout 
-      title="My Profile" 
+      title="Family Profile" 
       navigation={parentNavigation}
     >
       <div className="space-y-6">
@@ -165,64 +172,44 @@ function ParentProfile() {
         <div className="border-b border-gray-200 overflow-x-auto">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab("profile")}
+              onClick={() => setActiveTab("details")}
               className={`${
-                activeTab === "profile"
+                activeTab === "details"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Profile
+              Family Details
             </button>
             <button
-              onClick={() => setActiveTab("nanny")}
+              onClick={() => setActiveTab("documents")}
               className={`${
-                activeTab === "nanny"
+                activeTab === "documents"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Nanny View
+              Documents
             </button>
             <button
-              onClick={() => setActiveTab("chat")}
+              onClick={() => setActiveTab("accounts")}
               className={`${
-                activeTab === "chat"
+                activeTab === "accounts"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              AI Chat & Messaging
+              Parent Accounts
             </button>
             <button
-              onClick={() => setActiveTab("development")}
+              onClick={() => setActiveTab("preferences")}
               className={`${
-                activeTab === "development"
+                activeTab === "preferences"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
-              Development Tracker
-            </button>
-            <button
-              onClick={() => setActiveTab("resources")}
-              className={`${
-                activeTab === "resources"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Resources Hub
-            </button>
-            <button
-              onClick={() => setActiveTab("feedback")}
-              className={`${
-                activeTab === "feedback"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-            >
-              Feedback
+              Preferences & Settings
             </button>
           </nav>
         </div>
