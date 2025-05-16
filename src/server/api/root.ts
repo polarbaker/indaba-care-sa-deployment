@@ -36,6 +36,17 @@ import { getNannyProfile } from "./procedures/nanny/getNannyProfile";
 import { updateNannyProfile } from "./procedures/nanny/updateNannyProfile";
 import { manageCertification } from "./procedures/nanny/manageCertification";
 
+// Hours Log procedures
+import { getHoursLog } from "./procedures/nanny/getHoursLog";
+import { logHours } from "./procedures/nanny/logHours";
+import { updateHoursLog } from "./procedures/nanny/updateHoursLog";
+import { deleteHoursLog } from "./procedures/nanny/deleteHoursLog";
+import { getCurrentShift } from "./procedures/nanny/getCurrentShift";
+import { startShift } from "./procedures/nanny/startShift";
+import { endShift } from "./procedures/nanny/endShift";
+import { pauseResumeShift } from "./procedures/nanny/pauseResumeShift";
+import { getSchedule } from "./procedures/nanny/getSchedule";
+
 // Parent profile procedures
 import { getParentProfile } from "./procedures/parent/getParentProfile";
 import { updateParentProfile } from "./procedures/parent/updateParentProfile";
@@ -126,6 +137,17 @@ export const appRouter = createTRPCRouter({
   getNannyProfile,
   updateNannyProfile,
   manageCertification,
+  
+  // Hours Log procedures
+  getHoursLog,
+  logHours,
+  updateHoursLog,
+  deleteHoursLog,
+  getCurrentShift,
+  startShift,
+  endShift,
+  pauseResumeShift,
+  getSchedule,
   
   // Parent profile procedures
   getParentProfile,

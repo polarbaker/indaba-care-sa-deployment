@@ -14,7 +14,16 @@ export const getAssignedChildren = baseProcedure
     // Authenticate user
     const user = await getUserFromToken(input.token);
     
-    let children: { id: string; firstName: string; lastName: string }[] = [];
+    let children: { 
+      id: string; 
+      firstName: string; 
+      lastName: string;
+      birthDate?: string;
+      familyId?: string;
+      parentFirstName?: string | null;
+      parentLastName?: string | null;
+      address?: string | null;
+    }[] = [];
     
     if (user.role === "NANNY") {
       // For nannies, get children from assigned families
@@ -31,6 +40,15 @@ export const getAssignedChildren = baseProcedure
                       id: true,
                       firstName: true,
                       lastName: true,
+                      birthDate: true, // Added birthDate
+                      familyId: true,  // Added familyId
+                      parent: {      // Added parent relation
+                        select: {
+                          firstName: true,
+                          lastName: true,
+                          address: true, // Added address from parent profile
+                        }
+                      }
                     },
                   },
                 },
@@ -49,7 +67,16 @@ export const getAssignedChildren = baseProcedure
       
       // Collect all children from all assigned families
       children = nannyProfile.assignedFamilies.flatMap(
-        assignment => assignment.family.children
+        assignment => assignment.family.children.map(child => ({
+          id: child.id,
+          firstName: child.firstName,
+          lastName: child.lastName,
+          birthDate: child.birthDate?.toISOString(),
+          familyId: child.familyId,
+          parentFirstName: child.parent?.firstName,
+          parentLastName: child.parent?.lastName,
+          address: child.parent?.address,
+        }))
       );
     } else if (user.role === "PARENT") {
       // For parents, get their own children
@@ -61,6 +88,8 @@ export const getAssignedChildren = baseProcedure
               id: true,
               firstName: true,
               lastName: true,
+              birthDate: true, // Added birthDate
+              familyId: true,  // Added familyId
             },
           },
         },
@@ -73,7 +102,16 @@ export const getAssignedChildren = baseProcedure
         });
       }
       
-      children = parentProfile.children;
+      children = parentProfile.children.map(child => ({
+        id: child.id,
+        firstName: child.firstName,
+        lastName: child.lastName,
+        birthDate: child.birthDate?.toISOString(),
+        familyId: child.familyId,
+        parentFirstName: parentProfile.firstName,
+        parentLastName: parentProfile.lastName,
+        address: parentProfile.address,
+      }));
     } else if (user.role === "ADMIN") {
       // Admins can see all children
       const allChildren = await db.child.findMany({
@@ -81,10 +119,28 @@ export const getAssignedChildren = baseProcedure
           id: true,
           firstName: true,
           lastName: true,
+          birthDate: true, // Added birthDate
+          familyId: true,  // Added familyId
+          parent: {      // Added parent relation
+            select: {
+              firstName: true,
+              lastName: true,
+              address: true, // Added address from parent profile
+            }
+          }
         },
       });
       
-      children = allChildren;
+      children = allChildren.map(child => ({
+        id: child.id,
+        firstName: child.firstName,
+        lastName: child.lastName,
+        birthDate: child.birthDate?.toISOString(),
+        familyId: child.familyId,
+        parentFirstName: child.parent?.firstName,
+        parentLastName: child.parent?.lastName,
+        address: child.parent?.address,
+      }));
     } else {
       throw new TRPCError({
         code: "FORBIDDEN",

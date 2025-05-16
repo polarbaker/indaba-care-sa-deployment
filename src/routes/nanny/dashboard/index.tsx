@@ -1,9 +1,16 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { createFileRoute, useRouter, Link } from "@tanstack/react-router";
 import { DashboardLayout } from "~/components/layouts/DashboardLayout";
 import { useAuthStore } from "~/stores/authStore";
+import { useSyncStore } from "~/stores/syncStore";
 import { api } from "~/trpc/react";
-import { useState } from "react";
 import { motion } from "framer-motion";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { ObservationFeed } from "~/components/observations/ObservationFeed";
+import { TodaysSchedule } from "~/components/nanny/TodaysSchedule";
+import { HoursLogModal } from "~/components/nanny/HoursLogModal";
+import toast from "react-hot-toast";
 
 const nannyNavigation = [
   {
@@ -63,37 +70,117 @@ const nannyNavigation = [
   },
 ];
 
+// Store for persisting the selected tab
+interface DashboardTabState {
+  activeTab: 'overview' | 'families' | 'observations' | 'schedule';
+  setActiveTab: (tab: 'overview' | 'families' | 'observations' | 'schedule') => void;
+}
+
+const useDashboardTabStore = create<DashboardTabState>()(
+  persist(
+    (set) => ({
+      activeTab: 'overview',
+      setActiveTab: (tab) => set({ activeTab: tab }),
+    }),
+    {
+      name: "nanny-dashboard-tab",
+      storage: {
+        getItem: (name) => {
+          try {
+            const value = localStorage.getItem(name);
+            return value ? JSON.parse(value) : null;
+          } catch (e) {
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          localStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
+      },
+    }
+  )
+);
+
 export const Route = createFileRoute("/nanny/dashboard/")({
   component: NannyDashboard,
 });
 
 function NannyDashboard() {
   const { user, token } = useAuthStore();
+  const { isOnline } = useSyncStore();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'families' | 'observations' | 'schedule'>('overview');
+  const { activeTab, setActiveTab } = useDashboardTabStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
   
   // Fetch assigned children
-  const { data: childrenData, isLoading: isLoadingChildren } = api.getAssignedChildren.useQuery(
+  const { 
+    data: childrenData, 
+    isLoading: isLoadingChildren,
+    refetch: refetchChildren
+  } = api.getAssignedChildren.useQuery(
     { token: token || "" },
     { enabled: !!token }
   );
   
   // Fetch recent observations
-  const { data: recentObservationsData, isLoading: isLoadingObservations } = api.getObservations.useQuery(
+  const { 
+    data: recentObservationsData, 
+    isLoading: isLoadingObservations,
+    refetch: refetchObservations
+  } = api.getObservations.useQuery(
     { token: token || "", limit: 5 },
     { enabled: !!token }
   );
   
   // Fetch conversations with unread messages
-  const { data: conversationsData, isLoading: isLoadingConversations } = api.getConversations.useQuery(
+  const { 
+    data: conversationsData, 
+    isLoading: isLoadingConversations,
+    refetch: refetchConversations
+  } = api.getConversations.useQuery(
     { token: token || "" },
     { enabled: !!token }
+  );
+  
+  // Fetch current shift status
+  const { 
+    data: activeShiftData,
+    isLoading: isLoadingActiveShift,
+    refetch: refetchActiveShift
+  } = api.getCurrentShift.useQuery(
+    { token: token || "" },
+    { 
+      enabled: !!token,
+      refetchInterval: 60000, // Refetch every minute
+    }
   );
   
   // Calculate unread message count
   const unreadMessageCount = conversationsData 
     ? conversationsData.reduce((total, conv) => total + conv.unreadCount, 0)
     : 0;
+  
+  // Handle refresh action
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchChildren(),
+        refetchObservations(),
+        refetchConversations(),
+        refetchActiveShift()
+      ]);
+      toast.success("Dashboard refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh dashboard");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   // Get time of day greeting
   const getGreeting = () => {
@@ -113,11 +200,216 @@ function NannyDashboard() {
     });
   };
   
+  // Open hours log modal
+  const handleOpenHoursModal = () => {
+    setIsHoursModalOpen(true);
+  };
+  
+  // Close hours log modal
+  const handleCloseHoursModal = () => {
+    setIsHoursModalOpen(false);
+    refetchActiveShift();
+  };
+  
   return (
     <DashboardLayout 
       title="Nanny Dashboard" 
       navigation={nannyNavigation}
     >
+      {/* Metrics Row */}
+      <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+        >
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Assigned Families
+                  </dt>
+                  <dd>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isLoadingChildren ? (
+                        <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        new Set(childrenData?.children.map(child => child.familyId)).size || 0
+                      )}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <button
+                onClick={() => setActiveTab('families')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View all →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+        >
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                </svg>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Assigned Children
+                  </dt>
+                  <dd>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isLoadingChildren ? (
+                        <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        childrenData?.children.length || 0
+                      )}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <button
+                onClick={() => setActiveTab('families')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View all →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+        >
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Recent Observations
+                  </dt>
+                  <dd>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isLoadingObservations ? (
+                        <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        recentObservationsData?.data.length || 0
+                      )}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <button
+                onClick={() => setActiveTab('observations')}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View all →
+              </button>
+            </div>
+          </div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+        >
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-red-500 rounded-md p-3">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Unread Messages
+                  </dt>
+                  <dd>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isLoadingConversations ? (
+                        <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                      ) : (
+                        unreadMessageCount
+                      )}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <Link
+                to="/nanny/messages/"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View all →
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+      
+      {/* Refresh button */}
+      <div className="flex justify-end mb-6">
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className={`inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isRefreshing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <svg className="-ml-1 mr-2 h-4 w-4 text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              Refresh Dashboard
+            </>
+          )}
+        </button>
+      </div>
+      
       {/* Welcome header */}
       <div className="mb-8">
         <motion.div 
@@ -226,147 +518,11 @@ function NannyDashboard() {
       {/* Overview tab content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Stats cards */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
-            >
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Assigned Families
-                      </dt>
-                      <dd>
-                        <div className="text-lg font-semibold text-gray-900">
-                          {isLoadingChildren ? (
-                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          ) : (
-                            new Set(childrenData?.children.map(child => `${child.parentFirstName} ${child.parentLastName}`)).size || 0
-                          )}
-                        </div>
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
-            >
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
-                    </svg>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Assigned Children
-                      </dt>
-                      <dd>
-                        <div className="text-lg font-semibold text-gray-900">
-                          {isLoadingChildren ? (
-                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          ) : (
-                            childrenData?.children.length || 0
-                          )}
-                        </div>
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
-            >
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Recent Observations
-                      </dt>
-                      <dd>
-                        <div className="text-lg font-semibold text-gray-900">
-                          {isLoadingObservations ? (
-                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          ) : (
-                            recentObservationsData?.data.length || 0
-                          )}
-                        </div>
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
-              className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
-            >
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 bg-red-500 rounded-md p-3">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Unread Messages
-                      </dt>
-                      <dd>
-                        <div className="text-lg font-semibold text-gray-900">
-                          {isLoadingConversations ? (
-                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          ) : (
-                            unreadMessageCount
-                          )}
-                        </div>
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-          
           {/* Quick actions */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.5 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
             className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
           >
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
@@ -399,7 +555,7 @@ function NannyDashboard() {
                 </button>
                 
                 <button
-                  onClick={() => router.navigate({ to: "/nanny/hours-log/" })}
+                  onClick={handleOpenHoursModal}
                   className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                 >
                   <div className="bg-green-50 rounded-lg p-3">
@@ -425,16 +581,59 @@ function NannyDashboard() {
             </div>
           </motion.div>
           
+          {/* Active shift status (if any) */}
+          {activeShiftData?.hasActiveShift && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-md font-medium text-blue-800">
+                    Active Shift In Progress
+                  </h3>
+                  <p className="text-sm text-blue-600">
+                    Started at {new Date(activeShiftData.shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {activeShiftData.shift.familyName && ` • ${activeShiftData.shift.familyName}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-blue-800">
+                    {Math.floor(activeShiftData.shift.durationMinutes / 60)}h {activeShiftData.shift.durationMinutes % 60}m
+                  </div>
+                  {activeShiftData.shift.isPaused && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Currently Paused
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={handleOpenHoursModal}
+                  className="inline-flex items-center px-3 py-1.5 border border-blue-600 shadow-sm text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Manage Shift
+                </button>
+              </div>
+            </motion.div>
+          )}
+          
           {/* Recent activity */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.6 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
             className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
           >
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-medium leading-6 text-gray-900">Recent Activity</h3>
-              <button className="text-sm font-medium text-blue-600 hover:text-blue-500">
+              <button 
+                className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
+              >
                 View All
               </button>
             </div>
@@ -523,9 +722,15 @@ function NannyDashboard() {
             transition={{ duration: 0.3 }}
             className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
           >
-            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-medium leading-6 text-gray-900">Assigned Families & Children</h3>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">
+                  {isLoadingChildren ? "Loading..." : `${new Set(childrenData?.children.map(child => child.familyId)).size || 0} families, ${childrenData?.children.length || 0} children`}
+                </span>
+              </div>
             </div>
+            
             <div>
               {isLoadingChildren ? (
                 <div className="p-6">
@@ -542,21 +747,41 @@ function NannyDashboard() {
                 <div>
                   {/* Group children by family */}
                   {Array.from(
-                    childrenData.children.reduce((families, child) => {
-                      const familyKey = `${child.parentFirstName} ${child.parentLastName}`;
-                      if (!families.has(familyKey)) {
-                        families.set(familyKey, []);
+                    (childrenData?.children || []).reduce((familiesMap, child) => {
+                      const familyKey = child.familyId || 'unknown';
+                      if (!familiesMap.has(familyKey)) {
+                        familiesMap.set(familyKey, {
+                          id: child.familyId,
+                          name: child.parentFirstName && child.parentLastName ? `${child.parentFirstName} ${child.parentLastName} Family` : 'Unknown Family',
+                          address: child.address || 'No address provided',
+                          // Placeholder for next scheduled visit
+                          nextScheduledVisit: 'Not scheduled', 
+                          children: []
+                        });
                       }
-                      families.get(familyKey)!.push(child);
-                      return families;
-                    }, new Map<string, typeof childrenData.children>())
-                  ).map(([familyName, children], index) => (
-                    <div key={familyName} className={`${index > 0 ? 'border-t border-gray-200' : ''}`}>
-                      <div className="px-6 py-4 bg-gray-50">
-                        <h4 className="text-md font-medium text-gray-900">{familyName}</h4>
+                      familiesMap.get(familyKey)!.children.push(child);
+                      return familiesMap;
+                    }, new Map<string, any>())
+                  ).map(([familyId, familyData], index) => (
+                    <div key={familyId} className={index > 0 ? 'border-t border-gray-200' : ''}>
+                      <div className="px-6 py-4 bg-gray-50 flex justify-between items-center">
+                        <div>
+                          <h4 className="text-md font-medium text-gray-900">{familyData.name}</h4>
+                          <p className="text-sm text-gray-500">{familyData.address}</p>
+                          <p className="text-xs text-gray-400 mt-1">Next visit: {familyData.nextScheduledVisit}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            // In a real implementation, navigate to family profile
+                            toast.info("Family profile view not implemented yet");
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          View Family
+                        </button>
                       </div>
                       <ul className="divide-y divide-gray-200">
-                        {children.map((child) => (
+                        {familyData.children.map((child: any) => (
                           <li key={child.id} className="px-6 py-4 flex items-center hover:bg-gray-50">
                             <div className="flex-shrink-0">
                               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
@@ -571,12 +796,14 @@ function NannyDashboard() {
                                     {child.birthDate ? `${new Date().getFullYear() - new Date(child.birthDate).getFullYear()} years old` : 'Age not set'}
                                   </p>
                                 </div>
-                                <button
-                                  onClick={() => router.navigate({ to: `/nanny/observations-notes/`, search: { childId: child.id } })}
-                                  className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                  Add observation
-                                </button>
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => router.navigate({ to: `/nanny/observations-notes/`, search: { childId: child.id } })}
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                  >
+                                    Add observation
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </li>
@@ -604,176 +831,39 @@ function NannyDashboard() {
       {/* Observations tab content */}
       {activeTab === 'observations' && (
         <div className="space-y-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
-          >
-            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Recent Observations</h3>
-              <button
-                onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                New
-              </button>
+          {!isLoadingObservations && recentObservationsData ? (
+            <ObservationFeed
+              initialObservations={recentObservationsData.data}
+              hasNextPage={!!recentObservationsData.nextCursor}
+              isLoading={isLoadingObservations}
+              availableChildren={childrenData?.children || []}
+              userRole="NANNY"
+            />
+          ) : (
+            <div className="bg-white shadow rounded-lg p-6 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="mt-4 text-gray-500">Loading observations...</p>
             </div>
-            <div>
-              {isLoadingObservations ? (
-                <div className="p-6">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                    </div>
-                  </div>
-                </div>
-              ) : recentObservationsData?.data && recentObservationsData.data.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {recentObservationsData.data.map((observation) => {
-                    // Parse aiTags if it exists and is a string
-                    const tags = observation.aiTags ? 
-                      (() => {
-                        try { return JSON.parse(observation.aiTags); } 
-                        catch { return []; }
-                      })() : [];
-                      
-                    return (
-                      <li key={observation.id} className="p-6 hover:bg-gray-50">
-                        <div className="flex items-start space-x-4">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                              {observation.childName?.charAt(0) || "C"}
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex justify-between">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {observation.childName}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {new Date(observation.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <p className="mt-1 text-sm text-gray-600 line-clamp-3">
-                              {observation.content}
-                            </p>
-                            {tags.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {tags.slice(0, 3).map((tag: string) => (
-                                  <span key={tag} className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                                    {tag}
-                                  </span>
-                                ))}
-                                {tags.length > 3 && (
-                                  <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                                    +{tags.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            <div className="mt-2">
-                              <button
-                                onClick={() => router.navigate({ to: `/nanny/observations/${observation.id}` })}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-500"
-                              >
-                                View details
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="p-6 text-center text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No observations yet</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Get started by creating a new observation.
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <svg className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                      </svg>
-                      New Observation
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
+          )}
         </div>
       )}
       
       {/* Schedule tab content */}
       {activeTab === 'schedule' && (
-        <div className="space-y-6">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
-          >
-            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Today's Schedule</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-            <div className="p-6 text-center text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No scheduled events today</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Use the button below to log your working hours.
-              </p>
-              <div className="mt-6">
-                <button
-                  onClick={() => router.navigate({ to: "/nanny/hours-log/" })}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <svg className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Log Hours
-                </button>
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* Upcoming schedule */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
-          >
-            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Upcoming Schedule</h3>
-            </div>
-            <div className="p-6 text-center text-gray-500">
-              <p className="text-sm text-gray-500">
-                No upcoming scheduled events.
-              </p>
-            </div>
-          </motion.div>
-        </div>
+        <TodaysSchedule onLogHours={handleOpenHoursModal} />
       )}
+      
+      {/* Hours Log Modal */}
+      <HoursLogModal 
+        isOpen={isHoursModalOpen} 
+        onClose={handleCloseHoursModal} 
+        onSuccess={() => {
+          refetchActiveShift();
+          if (activeTab === 'schedule') {
+            // Refresh schedule data if on schedule tab
+          }
+        }}
+      />
     </DashboardLayout>
   );
 }
