@@ -6,6 +6,7 @@ import { api } from "~/trpc/react";
 import { useAuthStore } from "~/stores/authStore";
 import { useSyncStore } from "~/stores/syncStore";
 import { useAIStore } from "~/stores/aiStore";
+import { useNetworkStatus } from "~/hooks/useNetworkStatus";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { checkAIAvailability } from "~/lib/aiHelpers";
@@ -37,6 +38,7 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
   const { token, user } = useAuthStore();
   const { isOnline, addOperation } = useSyncStore();
   const { isAIAvailable } = useAIStore();
+  const { connectionQuality } = useNetworkStatus();
   
   const {
     register,
@@ -58,10 +60,23 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
       setAssistedContent(null);
       if (onMessageSent) onMessageSent();
       setIsSubmitting(false);
+      toast.success("Message sent!", { id: "reply-sent" });
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error(`Failed to send message: ${error.message}`, { id: "reply-error" });
       setIsSubmitting(false);
+      
+      // If we're offline but the error wasn't caught by the isOnline check
+      // This could happen if the network disconnected during the request
+      if (!isOnline || (error.message && error.message.includes("network"))) {
+        toast.error("You appear to be offline. Message will be queued to send later.", {
+          id: "offline-reply-queue",
+          duration: 5000,
+        });
+        
+        // Trigger the form submission again to queue it
+        void handleSubmit(onSubmit)();
+      }
     },
   });
   
@@ -95,10 +110,11 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
       });
     } else {
       try {
+        const messageId = crypto.randomUUID();
         addOperation({
           operationType: "CREATE",
           modelName: "Message",
-          recordId: crypto.randomUUID(),
+          recordId: messageId,
           data: {
             recipientId,
             content: messageContent,
@@ -108,13 +124,18 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
           },
         });
         
-        toast.success("Message saved for sending when back online");
+        toast.success("Message saved for sending when back online", {
+          id: "offline-reply-queued",
+          icon: '📤',
+        });
         reset();
         setAssistedContent(null);
         if (onMessageSent) onMessageSent();
         setIsSubmitting(false);
       } catch (error) {
-        toast.error("Failed to save message");
+        toast.error("Failed to save message for offline sending", {
+          id: "offline-queue-error",
+        });
         setIsSubmitting(false);
       }
     }
@@ -139,14 +160,16 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
     try {
       // This would be an API call to the AI service
       // For now, we'll simulate it with a timeout
-      toast.loading("AI is improving your message...");
+      toast.loading("AI is improving your message...", {
+        id: "ai-assistance-loading",
+      });
       
       // In a real implementation, this would be a call to your AI service
       setTimeout(() => {
         // Simulate AI response
         const improvedText = `${content}\n\nI've noticed that ${content.split(" ").length > 5 ? content.split(" ").slice(0, 5).join(" ") + "..." : content} shows good progress. Let me know if you have any questions!`;
         setAssistedContent(improvedText);
-        toast.dismiss();
+        toast.dismiss("ai-assistance-loading");
         toast.success("AI assistance applied");
       }, 1500);
     } catch (error) {
@@ -156,7 +179,7 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
   };
   
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-label="Message reply form">
       {/* Message input */}
       <div>
         <textarea
@@ -167,9 +190,10 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
           }`}
           placeholder="Type your message..."
           disabled={!!assistedContent}
+          aria-invalid={errors.content ? "true" : "false"}
         />
         {errors.content && (
-          <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+          <p className="mt-1 text-sm text-red-600" role="alert">{errors.content.message}</p>
         )}
         
         {/* AI assisted content */}
@@ -207,6 +231,8 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
               setValue("attachmentUrl", "");
               setValue("attachmentRefId", "");
             }}
+            disabled={!isOnline && watch("attachmentType") === "none"}
+            aria-label="Attachment type"
           >
             <option value="none">None</option>
             <option value="media">Media (Photo/Video/Audio)</option>
@@ -238,10 +264,30 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
                     }, 200);
                   }
                 }}
-                disabled={isUploadingAttachment}
+                disabled={isUploadingAttachment || !isOnline}
+                aria-label="Upload media file"
               />
-              {isUploadingAttachment && <p className="text-xs text-blue-600 mt-1">Uploading: {uploadProgress}%</p>}
-              {watch("attachmentUrl") && !isUploadingAttachment && <p className="text-xs text-green-600 mt-1">File attached: {watch("attachmentUrl")?.split('/').pop()}</p>}
+              {isUploadingAttachment && (
+                <div className="mt-1" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100}>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-blue-600 h-1.5 rounded-full"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">Uploading: {uploadProgress}%</p>
+                </div>
+              )}
+              {watch("attachmentUrl") && !isUploadingAttachment && (
+                <p className="text-xs text-green-600 mt-1">
+                  File attached: {watch("attachmentUrl")?.split('/').pop()}
+                </p>
+              )}
+              {!isOnline && (
+                <p className="text-xs text-amber-600 mt-1">
+                  You're offline. File uploads are unavailable.
+                </p>
+              )}
             </div>
           )}
 
@@ -252,12 +298,19 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
                 placeholder={`Enter ${watch("attachmentType")} ID or link`}
                 {...register("attachmentRefId")}
                 className="py-1 text-sm"
+                disabled={!isOnline}
+                aria-label={`${watch("attachmentType")} reference`}
               />
+              {!isOnline && (
+                <p className="text-xs text-amber-600 mt-1">
+                  You're offline. {watch("attachmentType")} search is unavailable.
+                </p>
+              )}
             </div>
           )}
         </div>
-        {errors.attachmentUrl && <p className="mt-1 text-sm text-red-600">{errors.attachmentUrl.message}</p>}
-        {errors.attachmentRefId && <p className="mt-1 text-sm text-red-600">{errors.attachmentRefId.message}</p>}
+        {errors.attachmentUrl && <p className="mt-1 text-sm text-red-600" role="alert">{errors.attachmentUrl.message}</p>}
+        {errors.attachmentRefId && <p className="mt-1 text-sm text-red-600" role="alert">{errors.attachmentRefId.message}</p>}
       </div>
 
       {/* Options */}
@@ -270,7 +323,8 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
               variant="outline"
               size="sm"
               onClick={requestAssistance}
-              disabled={!content || isSubmitting || !!assistedContent}
+              disabled={!content || isSubmitting || !!assistedContent || !isOnline}
+              aria-label="Get AI assistance with message"
             >
               <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
@@ -285,6 +339,7 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
               <select
                 {...register("childId")}
                 className="rounded-md border border-gray-300 py-1.5 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                aria-label="Related child"
               >
                 <option value="">No specific child</option>
                 {children.map((child) => (
@@ -306,6 +361,8 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
                 id="generateSummary"
                 {...register("generateSummary")}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                disabled={!isOnline}
+                aria-label="Generate AI summary"
               />
               <label
                 htmlFor="generateSummary"
@@ -313,6 +370,21 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
               >
                 Generate AI summary
               </label>
+              {!isOnline && watch("generateSummary") && (
+                <span className="text-xs text-amber-600 ml-1">
+                  (unavailable offline)
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Offline warning */}
+          {!isOnline && (
+            <div className="text-xs text-amber-600 flex items-center ml-2" role="alert">
+              <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <span>Offline</span>
             </div>
           )}
           
@@ -321,8 +393,9 @@ export function MessageForm({ recipientId, onMessageSent, children }: MessageFor
             type="submit"
             isLoading={isSubmitting}
             className="ml-auto"
+            aria-label={isOnline ? "Send message" : "Queue message for sending when online"}
           >
-            Send
+            {isOnline ? "Send" : "Queue"}
           </Button>
         </div>
       </div>

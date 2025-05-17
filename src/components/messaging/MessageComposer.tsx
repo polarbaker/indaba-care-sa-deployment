@@ -6,6 +6,7 @@ import { api } from "~/trpc/react";
 import { useAuthStore } from "~/stores/authStore";
 import { useSyncStore } from "~/stores/syncStore";
 import { useAIStore } from "~/stores/aiStore";
+import { useNetworkStatus } from "~/hooks/useNetworkStatus";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { checkAIAvailability } from "~/lib/aiHelpers";
@@ -85,8 +86,9 @@ export function MessageComposer({
   const searchResultsRef = useRef<HTMLDivElement>(null);
   
   const { token, user } = useAuthStore();
-  const { isOnline, addOperation } = useSyncStore();
+  const { isOnline, addOperation, pendingOperations } = useSyncStore();
   const { isAIAvailable } = useAIStore();
+  const { connectionQuality } = useNetworkStatus();
   
   // Set up form with default values
   const {
@@ -118,13 +120,16 @@ export function MessageComposer({
   const {
     data: recipientsData,
     isLoading: isLoadingRecipients,
+    error: recipientsError
   } = api.getAvailableRecipients.useQuery(
     { token: token || "", searchTerm: recipientSearchTerm },
     {
-      enabled: !!token && showRecipientResults && recipientSearchTerm.length > 0,
+      enabled: !!token && showRecipientResults && recipientSearchTerm.length > 0 && isOnline,
       onError: (err) => {
         console.error("Error fetching recipients:", err);
+        toast.error("Couldn't load recipients. Please try again.");
       },
+      retry: 2,
     }
   );
   
@@ -132,13 +137,16 @@ export function MessageComposer({
   const {
     data: observationsData,
     isLoading: isLoadingObservations,
+    error: observationsError
   } = api.getRecentObservations.useQuery(
     { token: token || "", searchTerm: observationSearchTerm },
     {
-      enabled: !!token && showObservationResults && attachmentType === "observation",
+      enabled: !!token && showObservationResults && attachmentType === "observation" && isOnline,
       onError: (err) => {
         console.error("Error fetching observations:", err);
+        toast.error("Couldn't load observations. Please try again.");
       },
+      retry: 2,
     }
   );
   
@@ -146,13 +154,16 @@ export function MessageComposer({
   const {
     data: milestonesData,
     isLoading: isLoadingMilestones,
+    error: milestonesError
   } = api.getRecentMilestones.useQuery(
     { token: token || "", searchTerm: milestoneSearchTerm },
     {
-      enabled: !!token && showMilestoneResults && attachmentType === "milestone",
+      enabled: !!token && showMilestoneResults && attachmentType === "milestone" && isOnline,
       onError: (err) => {
         console.error("Error fetching milestones:", err);
+        toast.error("Couldn't load milestones. Please try again.");
       },
+      retry: 2,
     }
   );
   
@@ -167,8 +178,23 @@ export function MessageComposer({
       toast.success("Message sent successfully");
     },
     onError: (error) => {
-      toast.error(`Failed to send message: ${error.message}`);
+      toast.error(`Failed to send message: ${error.message}`, {
+        id: "send-message-error",
+        duration: 5000,
+      });
       setIsSubmitting(false);
+      
+      // If we're offline but the error wasn't caught by the isOnline check
+      // This could happen if the network disconnected during the request
+      if (!isOnline || (error.message && error.message.includes("network"))) {
+        toast.error("You appear to be offline. Message will be queued to send later.", {
+          id: "offline-message-queue",
+          duration: 5000,
+        });
+        
+        // Trigger the form submission again to queue it
+        void handleSubmit(onSubmit)();
+      }
     },
   });
   
@@ -226,10 +252,11 @@ export function MessageComposer({
     } else {
       // If offline, add to sync queue
       try {
+        const messageId = crypto.randomUUID();
         addOperation({
           operationType: "CREATE",
           modelName: "Message",
-          recordId: crypto.randomUUID(),
+          recordId: messageId,
           data: {
             recipientId: data.recipientId,
             content: messageContent,
@@ -238,14 +265,20 @@ export function MessageComposer({
           },
         });
         
-        toast.success("Message saved for sending when back online");
+        toast.success("Message saved for sending when back online", {
+          id: "offline-message-queued",
+          icon: '📤',
+        });
+        
         reset();
         setAssistedContent(null);
         setIsComposerOpen(false);
         if (onMessageSent) onMessageSent();
         setIsSubmitting(false);
       } catch (error) {
-        toast.error("Failed to save message");
+        toast.error("Failed to save message for offline sending", {
+          id: "offline-queue-error",
+        });
         setIsSubmitting(false);
       }
     }
@@ -268,14 +301,16 @@ export function MessageComposer({
     try {
       // This would be an API call to the AI service
       // For now, we'll simulate it with a timeout
-      toast.loading("AI is improving your message...");
+      toast.loading("AI is improving your message...", {
+        id: "ai-assistance-loading",
+      });
       
       // In a real implementation, this would be a call to your AI service
       setTimeout(() => {
         // Simulate AI response
         const improvedText = `${content}\n\nI've noticed that ${content.split(" ").length > 5 ? content.split(" ").slice(0, 5).join(" ") + "..." : content} shows good progress. Let me know if you have any questions!`;
         setAssistedContent(improvedText);
-        toast.dismiss();
+        toast.dismiss("ai-assistance-loading");
         toast.success("AI assistance applied");
       }, 1500);
     } catch (error) {
@@ -299,6 +334,7 @@ export function MessageComposer({
             clearInterval(interval);
             setIsUploadingAttachment(false);
             setValue("attachmentUrl", `https://storage.example.com/media/${file.name}`);
+            toast.success(`File "${file.name}" attached`);
             return 100;
           }
           return next;
@@ -350,6 +386,11 @@ export function MessageComposer({
     setShowMilestoneResults(false);
   };
   
+  // Get pending operations count for this user
+  const pendingMessagesCount = pendingOperations.filter(
+    op => op.modelName === "Message" && op.status === "pending"
+  ).length;
+  
   // Render floating button if needed
   if (floatingButton && !isComposerOpen) {
     return (
@@ -361,6 +402,11 @@ export function MessageComposer({
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
+        {pendingMessagesCount > 0 && (
+          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
+            {pendingMessagesCount}
+          </span>
+        )}
       </button>
     );
   }
@@ -370,14 +416,17 @@ export function MessageComposer({
     <div 
       className={`bg-white rounded-lg shadow-lg ${className} ${floatingButton ? 'fixed bottom-6 right-6 w-96 z-50' : ''}`}
       ref={composerRef}
+      role="dialog"
+      aria-labelledby="message-composer-title"
     >
       <div className="p-4 border-b border-gray-200">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">New Message</h3>
+          <h3 id="message-composer-title" className="text-lg font-medium text-gray-900">New Message</h3>
           {floatingButton && (
             <button
               className="text-gray-400 hover:text-gray-500"
               onClick={() => setIsComposerOpen(false)}
+              aria-label="Close message composer"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -402,21 +451,36 @@ export function MessageComposer({
               value={recipientSearchTerm}
               onChange={handleRecipientSearch}
               onFocus={() => setShowRecipientResults(true)}
-              disabled={!!initialRecipient}
+              disabled={!!initialRecipient || !isOnline}
+              aria-autocomplete="list"
+              aria-controls={showRecipientResults ? "recipient-results" : undefined}
+              aria-expanded={showRecipientResults}
             />
             <input type="hidden" {...register("recipientId")} />
             {errors.recipientId && (
-              <p className="mt-1 text-sm text-red-600">{errors.recipientId.message}</p>
+              <p className="mt-1 text-sm text-red-600" role="alert">{errors.recipientId.message}</p>
+            )}
+            
+            {!isOnline && !initialRecipient && (
+              <p className="mt-1 text-xs text-amber-600">
+                You're offline. Recipient search is unavailable.
+              </p>
             )}
             
             {/* Recipient search results */}
             {showRecipientResults && !initialRecipient && (
               <div 
+                id="recipient-results"
                 className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md overflow-auto max-h-60"
                 ref={searchResultsRef}
+                role="listbox"
               >
                 {isLoadingRecipients ? (
                   <div className="p-2 text-center text-gray-500">Loading...</div>
+                ) : recipientsError ? (
+                  <div className="p-2 text-center text-red-500" role="alert">
+                    Error loading recipients. Please try again.
+                  </div>
                 ) : recipientsData && recipientsData.length > 0 ? (
                   <ul className="divide-y divide-gray-200">
                     {recipientsData.map((recipient) => (
@@ -424,6 +488,8 @@ export function MessageComposer({
                         key={recipient.id}
                         className="p-2 hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleSelectRecipient(recipient)}
+                        role="option"
+                        aria-selected={recipientId === recipient.id}
                       >
                         <div className="flex items-center">
                           {recipient.profileImageUrl ? (
@@ -470,9 +536,10 @@ export function MessageComposer({
               placeholder="Type your message..."
               {...register("content")}
               disabled={!!assistedContent}
+              aria-invalid={errors.content ? "true" : "false"}
             ></textarea>
             {errors.content && (
-              <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+              <p className="mt-1 text-sm text-red-600" role="alert">{errors.content.message}</p>
             )}
             
             {/* AI assisted content */}
@@ -507,6 +574,7 @@ export function MessageComposer({
               id="attachmentType"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
               {...register("attachmentType")}
+              aria-invalid={errors.attachmentType ? "true" : "false"}
             >
               <option value="none">None</option>
               <option value="media">Media (Photo/Video)</option>
@@ -523,12 +591,19 @@ export function MessageComposer({
                   accept="image/*,video/*"
                   onChange={handleFileChange}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  disabled={isUploadingAttachment}
+                  disabled={isUploadingAttachment || !isOnline}
+                  aria-describedby={!isOnline ? "offline-upload-message" : undefined}
                 />
                 <input type="hidden" {...register("attachmentUrl")} />
                 
+                {!isOnline && (
+                  <p id="offline-upload-message" className="mt-1 text-xs text-amber-600">
+                    You're offline. File uploads are unavailable.
+                  </p>
+                )}
+                
                 {isUploadingAttachment && (
-                  <div className="mt-2">
+                  <div className="mt-2" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100}>
                     <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
                       <div
                         className="bg-blue-600 h-2.5 rounded-full"
@@ -557,14 +632,32 @@ export function MessageComposer({
                   value={observationSearchTerm}
                   onChange={handleObservationSearch}
                   onFocus={() => setShowObservationResults(true)}
+                  disabled={!isOnline}
+                  aria-autocomplete="list"
+                  aria-controls={showObservationResults ? "observation-results" : undefined}
+                  aria-expanded={showObservationResults}
                 />
                 <input type="hidden" {...register("attachmentRefId")} />
                 
+                {!isOnline && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    You're offline. Observation search is unavailable.
+                  </p>
+                )}
+                
                 {/* Observation search results */}
                 {showObservationResults && (
-                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md overflow-auto max-h-60">
+                  <div 
+                    id="observation-results"
+                    className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md overflow-auto max-h-60"
+                    role="listbox"
+                  >
                     {isLoadingObservations ? (
                       <div className="p-2 text-center text-gray-500">Loading...</div>
+                    ) : observationsError ? (
+                      <div className="p-2 text-center text-red-500" role="alert">
+                        Error loading observations. Please try again.
+                      </div>
                     ) : observationsData && observationsData.length > 0 ? (
                       <ul className="divide-y divide-gray-200">
                         {observationsData.map((observation) => (
@@ -572,6 +665,8 @@ export function MessageComposer({
                             key={observation.id}
                             className="p-2 hover:bg-gray-50 cursor-pointer"
                             onClick={() => handleSelectObservation(observation)}
+                            role="option"
+                            aria-selected={watch("attachmentRefId") === observation.id}
                           >
                             <div className="text-sm text-gray-900 truncate">{observation.content}</div>
                             <div className="text-xs text-gray-500">
@@ -598,14 +693,32 @@ export function MessageComposer({
                   value={milestoneSearchTerm}
                   onChange={handleMilestoneSearch}
                   onFocus={() => setShowMilestoneResults(true)}
+                  disabled={!isOnline}
+                  aria-autocomplete="list"
+                  aria-controls={showMilestoneResults ? "milestone-results" : undefined}
+                  aria-expanded={showMilestoneResults}
                 />
                 <input type="hidden" {...register("attachmentRefId")} />
                 
+                {!isOnline && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    You're offline. Milestone search is unavailable.
+                  </p>
+                )}
+                
                 {/* Milestone search results */}
                 {showMilestoneResults && (
-                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md overflow-auto max-h-60">
+                  <div 
+                    id="milestone-results"
+                    className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md overflow-auto max-h-60"
+                    role="listbox"
+                  >
                     {isLoadingMilestones ? (
                       <div className="p-2 text-center text-gray-500">Loading...</div>
+                    ) : milestonesError ? (
+                      <div className="p-2 text-center text-red-500" role="alert">
+                        Error loading milestones. Please try again.
+                      </div>
                     ) : milestonesData && milestonesData.length > 0 ? (
                       <ul className="divide-y divide-gray-200">
                         {milestonesData.map((milestone) => (
@@ -613,6 +726,8 @@ export function MessageComposer({
                             key={milestone.id}
                             className="p-2 hover:bg-gray-50 cursor-pointer"
                             onClick={() => handleSelectMilestone(milestone)}
+                            role="option"
+                            aria-selected={watch("attachmentRefId") === milestone.id}
                           >
                             <div className="text-sm font-medium text-gray-900">{milestone.name}</div>
                             <div className="text-xs text-gray-500 truncate">{milestone.description}</div>
@@ -659,10 +774,16 @@ export function MessageComposer({
                   type="checkbox"
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   {...register("generateSummary")}
+                  disabled={!isOnline}
                 />
                 <label htmlFor="generateSummary" className="ml-2 block text-sm text-gray-700">
                   Generate AI summary
                 </label>
+                {!isOnline && watch("generateSummary") && (
+                  <p className="text-xs text-amber-600 ml-2">
+                    (Unavailable offline)
+                  </p>
+                )}
               </div>
             )}
             
@@ -674,7 +795,7 @@ export function MessageComposer({
                   variant="outline"
                   size="sm"
                   onClick={requestAssistance}
-                  disabled={!content || isSubmitting || !!assistedContent}
+                  disabled={!content || isSubmitting || !!assistedContent || !isOnline}
                 >
                   <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
@@ -687,7 +808,7 @@ export function MessageComposer({
           
           {/* Offline warning */}
           {!isOnline && (
-            <div className="text-sm text-amber-600 flex items-center">
+            <div className="text-sm text-amber-600 flex items-center" role="alert">
               <svg className="h-5 w-5 text-amber-500 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
               </svg>
@@ -711,7 +832,7 @@ export function MessageComposer({
               type="submit"
               isLoading={isSubmitting}
             >
-              Send Message
+              {isOnline ? "Send Message" : "Queue Message"}
             </Button>
           </div>
         </div>
