@@ -1,0 +1,13 @@
+:root {
+  --color-primary: #F06559;       /* coral petal */
+  --color-primary-light: #FFECEA; /* pale coral */
+  --color-secondary: #495057;     /* lotus grey */
+  --color-background: #FFFFFF;
+  --color-surface: #F8F9FA;
+  --color-on-primary: #FFFFFF;
+  --color-on-secondary: #FFFFFF;
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+}

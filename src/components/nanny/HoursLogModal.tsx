@@ -341,16 +341,16 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-          <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+          <div className="absolute inset-0 bg-secondary opacity-75"></div>
         </div>
         
         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
         
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-background rounded-card shadow-card overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-background px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                <h3 className="text-lg leading-6 font-medium text-text-primary font-heading">
                   Log Hours
                 </h3>
                 
@@ -359,22 +359,22 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                   <div className="flex rounded-md shadow-sm">
                     <button
                       type="button"
-                      className={`relative inline-flex items-center px-4 py-2 rounded-l-md border ${
+                      className={`relative inline-flex items-center px-4 py-2 rounded-l-md border transition-all duration-150 ${
                         mode === "manual"
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      } text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500`}
+                          ? "bg-primary text-on-primary border-primary"
+                          : "bg-background text-text-primary border-secondary hover:bg-surface"
+                      } text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary`}
                       onClick={() => setMode("manual")}
                     >
                       Manual Entry
                     </button>
                     <button
                       type="button"
-                      className={`relative inline-flex items-center px-4 py-2 rounded-r-md border ${
+                      className={`relative inline-flex items-center px-4 py-2 rounded-r-md border transition-all duration-150 ${
                         mode === "tracker"
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      } text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500`}
+                          ? "bg-primary text-on-primary border-primary"
+                          : "bg-background text-text-primary border-secondary hover:bg-surface"
+                      } text-sm font-medium focus:z-10 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary`}
                       onClick={() => setMode("tracker")}
                     >
                       Time Tracker
@@ -384,12 +384,12 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                 
                 {/* Common fields */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-text-primary mb-1">
                     Family (Optional)
                   </label>
                   <select
                     {...register("familyId")}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-secondary focus:outline-none focus:ring-primary focus:border-primary transition-all duration-150 sm:text-sm rounded-lg"
                     disabled={isTracking || isSubmitting || isLoadingFamilies}
                   >
                     <option value="">Select a family</option>
@@ -402,13 +402,13 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-text-primary mb-1">
                     Notes (Optional)
                   </label>
                   <textarea
                     {...register("notes")}
                     rows={3}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                    className="shadow-sm focus:ring-primary focus:border-primary block w-full sm:text-sm border-secondary rounded-lg transition-all duration-150"
                     placeholder="Add any notes about this shift..."
                     disabled={isSubmitting}
                   />
@@ -419,7 +419,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                   <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-text-primary mb-1">
                           Date
                         </label>
                         <Input
@@ -432,7 +432,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                       
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
                             Start Time
                           </label>
                           <Input
@@ -444,7 +444,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                         </div>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-text-primary mb-1">
                             End Time
                           </label>
                           <Input
@@ -458,7 +458,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                     </div>
                     
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-text-primary mb-1">
                         Break Time (minutes)
                       </label>
                       <Input
@@ -493,20 +493,20 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                   <div>
                     {isLoadingActiveShift ? (
                       <div className="text-center py-6">
-                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                        <p className="mt-2 text-gray-500">Loading shift status...</p>
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary mx-auto"></div>
+                        <p className="mt-2 text-text-secondary">Loading shift status...</p>
                       </div>
                     ) : isTracking ? (
                       <div className="space-y-4">
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
-                          <div className="text-3xl font-bold text-gray-900">
+                        <div className="text-center p-4 bg-surface rounded-lg">
+                          <div className="text-3xl font-bold text-text-primary">
                             {formatTime(trackingElapsed - trackingBreak)}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-text-secondary">
                             Started at {trackingStartTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                           {trackingBreak > 0 && (
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-text-secondary mt-1">
                               Break time: {formatBreakTime(trackingBreak)}
                             </div>
                           )}
@@ -550,7 +550,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                         </div>
                         
                         {isPaused && (
-                          <div className="text-center text-sm text-yellow-600">
+                          <div className="text-center text-sm text-primary">
                             <svg className="inline-block h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                             </svg>
@@ -559,7 +559,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                         )}
                         
                         {!isOnline && (
-                          <div className="text-center text-sm text-red-600 mt-2">
+                          <div className="text-center text-sm text-[#E63946] mt-2">
                             <svg className="inline-block h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                             </svg>
@@ -569,8 +569,8 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <div className="text-center p-6 bg-gray-50 rounded-lg">
-                          <p className="text-gray-700">
+                        <div className="text-center p-6 bg-surface rounded-lg">
+                          <p className="text-text-primary">
                             Start tracking your working hours in real-time.
                           </p>
                         </div>
@@ -589,7 +589,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                         </div>
                         
                         {!isOnline && (
-                          <div className="text-center text-sm text-red-600">
+                          <div className="text-center text-sm text-[#E63946]">
                             <svg className="inline-block h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                             </svg>
@@ -600,7 +600,7 @@ export function HoursLogModal({ isOpen, onClose, onSuccess }: HoursLogModalProps
                         <div className="text-center">
                           <button
                             type="button"
-                            className="text-sm text-blue-600 hover:text-blue-800"
+                            className="text-sm text-primary hover:text-primary-light transition-colors duration-150"
                             onClick={() => setMode("manual")}
                           >
                             Switch to manual entry

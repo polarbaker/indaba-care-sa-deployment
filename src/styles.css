@@ -1,13 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import './styles/theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
-* {
-  @apply border-gray-200 dark:border-gray-800;
-}
+
 body {
-  @apply bg-gray-50 text-gray-950 dark:bg-gray-900 dark:text-gray-200;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-text-primary);
+}
+
+a, button {
+  color: var(--color-primary);
+  transition: all 150ms ease;
+}
+
+a:hover, button:hover {
+  color: color-mix(in srgb, var(--color-primary) 80%, white);
+}
+
+button, input, textarea, select {
+  transition: all 150ms ease;
+}
+
+.card, .panel {
+  background-color: var(--color-surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 200ms ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

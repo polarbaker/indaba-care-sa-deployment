@@ -94,13 +94,13 @@ export function RegisterForm() {
       />
       
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-text-primary">
           I am registering as a:
         </label>
         
         <div className="flex flex-wrap gap-4">
-          <label className={`flex items-center space-x-2 p-3 border rounded-md cursor-pointer ${
-            selectedRole === "PARENT" ? "border-blue-500 bg-blue-50" : "border-gray-300"
+          <label className={`flex items-center space-x-2 p-3 border rounded-md cursor-pointer transition-all duration-150 ${
+            selectedRole === "PARENT" ? "border-primary bg-primary-light" : "border-secondary"
           }`}>
             <input
               type="radio"
@@ -108,11 +108,11 @@ export function RegisterForm() {
               {...register("role")}
               className="sr-only"
             />
-            <span className={selectedRole === "PARENT" ? "text-blue-700 font-medium" : ""}>Parent</span>
+            <span className={selectedRole === "PARENT" ? "text-primary font-medium" : "text-text-primary"}>Parent</span>
           </label>
           
-          <label className={`flex items-center space-x-2 p-3 border rounded-md cursor-pointer ${
-            selectedRole === "NANNY" ? "border-blue-500 bg-blue-50" : "border-gray-300"
+          <label className={`flex items-center space-x-2 p-3 border rounded-md cursor-pointer transition-all duration-150 ${
+            selectedRole === "NANNY" ? "border-primary bg-primary-light" : "border-secondary"
           }`}>
             <input
               type="radio"
@@ -120,11 +120,11 @@ export function RegisterForm() {
               {...register("role")}
               className="sr-only"
             />
-            <span className={selectedRole === "NANNY" ? "text-blue-700 font-medium" : ""}>Nanny</span>
+            <span className={selectedRole === "NANNY" ? "text-primary font-medium" : "text-text-primary"}>Nanny</span>
           </label>
         </div>
         
-        {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>}
+        {errors.role && <p className="mt-1 text-sm text-[#E63946]">{errors.role.message}</p>}
       </div>
       
       <Input
@@ -147,6 +147,7 @@ export function RegisterForm() {
         type="submit"
         fullWidth
         isLoading={isRegistering}
+        className="hover:scale-[1.03] transition-transform duration-150"
       >
         {isRegistering ? "Creating account..." : "Create account"}
       </Button>

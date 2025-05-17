@@ -10,6 +10,8 @@ import { persist } from "zustand/middleware";
 import { ObservationFeed } from "~/components/observations/ObservationFeed";
 import { TodaysSchedule } from "~/components/nanny/TodaysSchedule";
 import { HoursLogModal } from "~/components/nanny/HoursLogModal";
+import { LotusPetal } from "~/components/ui/LotusPetal";
+import { Card } from "~/components/ui/Card";
 import toast from "react-hot-toast";
 
 const nannyNavigation = [
@@ -222,22 +224,22 @@ function NannyDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+          className="bg-surface rounded-card shadow-card overflow-hidden"
         >
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                 </svg>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
                     Assigned Families
                   </dt>
                   <dd>
-                    <div className="text-lg font-semibold text-gray-900">
+                    <div className="text-lg font-semibold text-text-primary">
                       {isLoadingChildren ? (
                         <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
                       ) : (
@@ -251,7 +253,7 @@ function NannyDashboard() {
             <div className="mt-2 text-sm">
               <button
                 onClick={() => setActiveTab('families')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
               >
                 View all →
               </button>
@@ -263,22 +265,22 @@ function NannyDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+          className="bg-surface rounded-card shadow-card overflow-hidden"
         >
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
                 </svg>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
                     Assigned Children
                   </dt>
                   <dd>
-                    <div className="text-lg font-semibold text-gray-900">
+                    <div className="text-lg font-semibold text-text-primary">
                       {isLoadingChildren ? (
                         <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
                       ) : (
@@ -292,7 +294,7 @@ function NannyDashboard() {
             <div className="mt-2 text-sm">
               <button
                 onClick={() => setActiveTab('families')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
               >
                 View all →
               </button>
@@ -304,23 +306,23 @@ function NannyDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+          className="bg-surface rounded-card shadow-card overflow-hidden"
         >
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-500 rounded-md p-3">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
                     Recent Observations
                   </dt>
                   <dd>
-                    <div className="text-lg font-semibold text-gray-900">
+                    <div className="text-lg font-semibold text-text-primary">
                       {isLoadingObservations ? (
                         <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
                       ) : (
@@ -334,7 +336,7 @@ function NannyDashboard() {
             <div className="mt-2 text-sm">
               <button
                 onClick={() => setActiveTab('observations')}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
               >
                 View all →
               </button>
@@ -346,22 +348,22 @@ function NannyDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
-          className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200"
+          className="bg-surface rounded-card shadow-card overflow-hidden"
         >
           <div className="p-5">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-red-500 rounded-md p-3">
-                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                 </svg>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
                     Unread Messages
                   </dt>
                   <dd>
-                    <div className="text-lg font-semibold text-gray-900">
+                    <div className="text-lg font-semibold text-text-primary">
                       {isLoadingConversations ? (
                         <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
                       ) : (
@@ -375,7 +377,7 @@ function NannyDashboard() {
             <div className="mt-2 text-sm">
               <Link
                 to="/nanny/messages/"
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
               >
                 View all →
               </Link>
@@ -416,15 +418,18 @@ function NannyDashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg overflow-hidden"
+          className="bg-gradient-to-r from-primary to-primary-light rounded-xl shadow-lg overflow-hidden relative"
         >
+          <div className="absolute top-5 right-5 opacity-10">
+            <LotusPetal color="white" width={120} height={120} />
+          </div>
           <div className="px-6 py-8 sm:p-10 sm:pb-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-white">
                   {getGreeting()}, {user?.firstName}!
                 </h2>
-                <p className="mt-2 text-blue-100">
+                <p className="mt-2 text-white text-opacity-80">
                   {getTodayDate()}
                 </p>
               </div>
@@ -435,14 +440,14 @@ function NannyDashboard() {
               </div>
             </div>
           </div>
-          <div className="px-6 py-4 bg-blue-700 bg-opacity-50 sm:px-10">
+          <div className="px-6 py-4 bg-primary bg-opacity-20 sm:px-10">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-blue-100">
+              <p className="text-sm text-white text-opacity-90">
                 You have {childrenData?.children.length || 0} assigned children and {unreadMessageCount} unread messages
               </p>
               <button
                 onClick={() => router.navigate({ to: "/nanny/messages/" })}
-                className="text-sm font-medium text-white hover:text-blue-100 transition-colors"
+                className="text-sm font-medium text-white hover:text-white hover:underline transition-colors"
               >
                 Check messages →
               </button>
@@ -457,7 +462,7 @@ function NannyDashboard() {
           <select
             id="tabs"
             name="tabs"
-            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value as any)}
           >
@@ -474,9 +479,9 @@ function NannyDashboard() {
                 onClick={() => setActiveTab('overview')}
                 className={`${
                   activeTab === 'overview'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150`}
               >
                 Overview
               </button>
@@ -484,9 +489,9 @@ function NannyDashboard() {
                 onClick={() => setActiveTab('families')}
                 className={`${
                   activeTab === 'families'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150`}
               >
                 Assigned Families
               </button>
@@ -494,9 +499,9 @@ function NannyDashboard() {
                 onClick={() => setActiveTab('observations')}
                 className={`${
                   activeTab === 'observations'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150`}
               >
                 Recent Observations
               </button>
@@ -504,9 +509,9 @@ function NannyDashboard() {
                 onClick={() => setActiveTab('schedule')}
                 className={`${
                   activeTab === 'schedule'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150`}
               >
                 Today's Schedule
               </button>
@@ -523,59 +528,59 @@ function NannyDashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
+            className="bg-surface rounded-card shadow-card overflow-hidden"
           >
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Quick Actions</h3>
+              <h3 className="text-lg font-medium leading-6 text-text-primary font-heading">Quick Actions</h3>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 <button
                   onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
-                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-primary hover:ring-1 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150"
                 >
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <div className="bg-primary-light rounded-lg p-3">
+                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">New Observation</span>
+                  <span className="text-sm font-medium text-text-primary">New Observation</span>
                 </button>
                 
                 <button
                   onClick={() => router.navigate({ to: "/nanny/messages/" })}
-                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-primary hover:ring-1 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150"
                 >
-                  <div className="bg-purple-50 rounded-lg p-3">
-                    <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <div className="bg-primary-light rounded-lg p-3">
+                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">Send Message</span>
+                  <span className="text-sm font-medium text-text-primary">Send Message</span>
                 </button>
                 
                 <button
                   onClick={handleOpenHoursModal}
-                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-primary hover:ring-1 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150"
                 >
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <div className="bg-primary-light rounded-lg p-3">
+                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">Log Hours</span>
+                  <span className="text-sm font-medium text-text-primary">Log Hours</span>
                 </button>
                 
                 <button
                   onClick={() => router.navigate({ to: "/nanny/professional-development/" })}
-                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-blue-400 hover:ring-1 hover:ring-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  className="relative rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col items-center space-y-3 hover:border-primary hover:ring-1 hover:ring-primary focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-150"
                 >
-                  <div className="bg-yellow-50 rounded-lg p-3">
-                    <svg className="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <div className="bg-primary-light rounded-lg p-3">
+                    <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">Resources</span>
+                  <span className="text-sm font-medium text-text-primary">Resources</span>
                 </button>
               </div>
             </div>
@@ -587,20 +592,20 @@ function NannyDashboard() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.2 }}
-              className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm"
+              className="bg-primary-light border border-primary border-opacity-20 rounded-lg p-4 shadow-sm"
             >
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-md font-medium text-blue-800">
+                  <h3 className="text-md font-medium text-primary">
                     Active Shift In Progress
                   </h3>
-                  <p className="text-sm text-blue-600">
+                  <p className="text-sm text-text-primary">
                     Started at {new Date(activeShiftData.shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     {activeShiftData.shift.familyName && ` • ${activeShiftData.shift.familyName}`}
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-blue-800">
+                  <div className="text-lg font-bold text-primary">
                     {Math.floor(activeShiftData.shift.durationMinutes / 60)}h {activeShiftData.shift.durationMinutes % 60}m
                   </div>
                   {activeShiftData.shift.isPaused && (
@@ -613,7 +618,7 @@ function NannyDashboard() {
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={handleOpenHoursModal}
-                  className="inline-flex items-center px-3 py-1.5 border border-blue-600 shadow-sm text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-3 py-1.5 border border-primary shadow-sm text-sm font-medium rounded-md text-primary bg-white hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-150"
                 >
                   Manage Shift
                 </button>
@@ -626,12 +631,12 @@ function NannyDashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden"
+            className="bg-surface rounded-card shadow-card overflow-hidden"
           >
             <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Recent Activity</h3>
+              <h3 className="text-lg font-medium leading-6 text-text-primary font-heading">Recent Activity</h3>
               <button 
-                className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-150"
                 onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
               >
                 View All
@@ -655,29 +660,29 @@ function NannyDashboard() {
                 ))
               ) : recentObservationsData?.data && recentObservationsData.data.length > 0 ? (
                 recentObservationsData.data.slice(0, 3).map((observation) => (
-                  <div key={observation.id} className="p-6">
+                  <div key={observation.id} className="p-6 hover:bg-gray-50 transition-colors duration-150">
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                        <div className="h-10 w-10 rounded-full bg-primary-light flex items-center justify-center text-primary font-medium">
                           {observation.childName?.charAt(0) || "C"}
                         </div>
                       </div>
                       <div className="ml-4 flex-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-text-primary">
                             Observation for {observation.childName}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-text-secondary">
                             {new Date(observation.createdAt).toLocaleDateString()}
                           </p>
                         </div>
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                        <p className="mt-1 text-sm text-text-secondary line-clamp-2">
                           {observation.content}
                         </p>
                         <div className="mt-2 flex">
                           <button
                             onClick={() => router.navigate({ to: `/nanny/observations/${observation.id}` })}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                            className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-150"
                           >
                             View details
                           </button>
@@ -687,18 +692,18 @@ function NannyDashboard() {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500">
+                <div className="p-6 text-center text-text-secondary">
                   <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No recent activity</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h3 className="mt-2 text-sm font-medium text-text-primary">No recent activity</h3>
+                  <p className="mt-1 text-sm text-text-secondary">
                     Get started by creating a new observation.
                   </p>
                   <div className="mt-6">
                     <button
                       onClick={() => router.navigate({ to: "/nanny/observations-notes/" })}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-on-primary bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-150"
                     >
                       <svg className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

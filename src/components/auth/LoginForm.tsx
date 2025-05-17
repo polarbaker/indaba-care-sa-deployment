@@ -7,6 +7,7 @@ import { useAuthStore } from "~/stores/authStore";
 import toast from "react-hot-toast";
 import { useRouter } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { Input } from "~/components/ui/Input";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -63,12 +64,12 @@ export function LoginForm() {
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="email" className="block text-sm font-medium text-text-primary">
             Email
           </label>
-          <div className="relative rounded-md shadow-sm">
+          <div className="relative rounded-lg shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <svg className="h-5 w-5 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
               </svg>
@@ -78,8 +79,8 @@ export function LoginForm() {
               type="email"
               autoComplete="email"
               className={`block w-full pl-10 pr-3 py-3 border ${
-                errors.email ? 'border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-              } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 transition duration-150 ease-in-out sm:text-sm`}
+                errors.email ? 'border-[#E63946] focus:ring-[#E63946] focus:border-[#E63946]' : 'border-secondary focus:ring-primary focus:border-primary'
+              } rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-150 ease-in-out sm:text-sm`}
               placeholder="your@email.com"
               {...register("email")}
             />
@@ -88,7 +89,7 @@ export function LoginForm() {
             <motion.p 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mt-1 text-sm text-red-600"
+              className="mt-1 text-sm text-[#E63946]"
             >
               {errors.email.message}
             </motion.p>
@@ -96,12 +97,12 @@ export function LoginForm() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="password" className="block text-sm font-medium text-text-primary">
             Password
           </label>
-          <div className="relative rounded-md shadow-sm">
+          <div className="relative rounded-lg shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <svg className="h-5 w-5 text-secondary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
               </svg>
             </div>
@@ -110,8 +111,8 @@ export function LoginForm() {
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               className={`block w-full pl-10 pr-10 py-3 border ${
-                errors.password ? 'border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-              } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 transition duration-150 ease-in-out sm:text-sm`}
+                errors.password ? 'border-[#E63946] focus:ring-[#E63946] focus:border-[#E63946]' : 'border-secondary focus:ring-primary focus:border-primary'
+              } rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-150 ease-in-out sm:text-sm`}
               placeholder="••••••••"
               {...register("password")}
             />
@@ -119,7 +120,7 @@ export function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="text-secondary hover:text-text-primary focus:outline-none transition-colors duration-150"
               >
                 {showPassword ? (
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -139,7 +140,7 @@ export function LoginForm() {
             <motion.p 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mt-1 text-sm text-red-600"
+              className="mt-1 text-sm text-[#E63946]"
             >
               {errors.password.message}
             </motion.p>
@@ -152,15 +153,15 @@ export function LoginForm() {
               id="remember-me"
               name="remember-me"
               type="checkbox"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary focus:ring-primary border-secondary rounded transition-colors duration-150"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-text-secondary">
               Remember me
             </label>
           </div>
 
           <div className="text-sm">
-            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="#" className="font-medium text-primary hover:text-primary-light transition-colors duration-150">
               Forgot your password?
             </a>
           </div>
@@ -171,9 +172,9 @@ export function LoginForm() {
             type="submit"
             disabled={isLoggingIn}
             className={`
-              w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-              ${isLoggingIn ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'}
-              transition-colors duration-150 ease-in-out
+              w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-on-primary
+              ${isLoggingIn ? 'bg-primary opacity-80' : 'bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary hover:scale-[1.03]'}
+              transition-all duration-150 ease-in-out
             `}
           >
             {isLoggingIn ? (

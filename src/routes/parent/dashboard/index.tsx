@@ -4,6 +4,9 @@ import { DashboardLayout } from "~/components/layouts/DashboardLayout";
 import { useAuthStore } from "~/stores/authStore";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/Button";
+import { Card } from "~/components/ui/Card";
+import { LotusPetal } from "~/components/ui/LotusPetal";
+import { motion } from "framer-motion";
 
 const parentNavigation = [
   {
@@ -140,6 +143,14 @@ function ParentDashboard() {
     obs => new Date(obs.createdAt) > oneDayAgo
   ).length || 0;
   
+  // Get time of day greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+  
   return (
     <DashboardLayout 
       title="Parent Dashboard" 
@@ -147,198 +158,293 @@ function ParentDashboard() {
     >
       <div className="space-y-6">
         {/* Welcome section */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900">Welcome, {user?.firstName}!</h2>
-          <p className="mt-1 text-gray-500">
-            Here's what's happening with your children today.
-          </p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-gradient-to-r from-primary to-primary-light rounded-xl shadow-lg overflow-hidden relative"
+        >
+          <div className="absolute top-0 right-0 opacity-10">
+            <LotusPetal color="white" width={120} height={120} />
+          </div>
+          <div className="px-6 py-8 sm:p-10 sm:pb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">
+                  {getGreeting()}, {user?.firstName}!
+                </h2>
+                <p className="mt-2 text-white text-opacity-80">
+                  Here's what's happening with your children today.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="px-6 py-4 bg-primary bg-opacity-20 sm:px-10">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-white text-opacity-90">
+                You have {childrenCount} {childrenCount === 1 ? 'child' : 'children'} and {unreadMessageCount} unread {unreadMessageCount === 1 ? 'message' : 'messages'}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-white border-white hover:bg-white hover:bg-opacity-20"
+                onClick={() => window.location.href = '/parent/messages/'}
+              >
+                Check messages →
+              </Button>
+            </div>
+          </div>
+        </motion.div>
         
         {/* Stats overview */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="bg-surface rounded-card shadow-card"
+          >
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                Children
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {isLoadingChildren ? (
-                  <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
-                ) : (
-                  childrenCount
-                )}
-              </dd>
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                  </svg>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
+                    Children
+                  </dt>
+                  <dd className="mt-1 text-3xl font-semibold text-text-primary">
+                    {isLoadingChildren ? (
+                      <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
+                    ) : (
+                      childrenCount
+                    )}
+                  </dd>
+                </div>
+              </div>
+              <div className="mt-2 text-sm">
+                <Link
+                  to="/parent/children/"
+                  className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
+                >
+                  View all →
+                </Link>
+              </div>
             </div>
-          </div>
+          </motion.div>
           
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-surface rounded-card shadow-card"
+          >
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                New Observations (24h)
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {isLoadingObservations ? (
-                  <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
-                ) : (
-                  newObservationsCount
-                )}
-              </dd>
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
+                    New Observations (24h)
+                  </dt>
+                  <dd className="mt-1 text-3xl font-semibold text-text-primary">
+                    {isLoadingObservations ? (
+                      <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
+                    ) : (
+                      newObservationsCount
+                    )}
+                  </dd>
+                </div>
+              </div>
+              <div className="mt-2 text-sm">
+                <Link
+                  to="/parent/observations/"
+                  className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
+                >
+                  View all →
+                </Link>
+              </div>
             </div>
-          </div>
+          </motion.div>
           
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-surface rounded-card shadow-card"
+          >
             <div className="px-4 py-5 sm:p-6">
-              <dt className="text-sm font-medium text-gray-500 truncate">
-                Unread Messages
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                {isLoadingConversations ? (
-                  <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
-                ) : (
-                  unreadMessageCount
-                )}
-              </dd>
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-primary-light rounded-md p-3">
+                  <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dt className="text-sm font-medium text-text-secondary truncate">
+                    Unread Messages
+                  </dt>
+                  <dd className="mt-1 text-3xl font-semibold text-text-primary">
+                    {isLoadingConversations ? (
+                      <div className="animate-pulse h-8 w-8 bg-gray-200 rounded"></div>
+                    ) : (
+                      unreadMessageCount
+                    )}
+                  </dd>
+                </div>
+              </div>
+              <div className="mt-2 text-sm">
+                <Link
+                  to="/parent/messages/"
+                  className="text-primary hover:text-primary-light font-medium transition-colors duration-150"
+                >
+                  View all →
+                </Link>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
         
         {/* Children section */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Your Children</h3>
+        <Card
+          title="Your Children"
+          titleAction={
             <Link
               to="/parent/children/add"
-              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-semibold text-on-primary shadow-sm hover:bg-opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-all duration-150"
             >
               <svg className="-ml-0.5 mr-1.5 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               Add Child
             </Link>
-          </div>
-          <div className="border-t border-gray-200">
-            {isLoadingChildren ? (
-              <div className="px-4 py-5 sm:p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ) : !childrenData?.children.length ? (
-              <div className="px-4 py-5 sm:p-6 text-center text-gray-500">
-                You haven't added any children yet. Click "Add Child" to get started.
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-200">
-                {childrenData.children.map((child) => (
-                  <li key={child.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          {child.firstName.charAt(0)}
+          }
+        >
+          {isLoadingChildren ? (
+            <div className="animate-pulse space-y-4">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ) : !childrenData?.children.length ? (
+            <div className="text-center text-text-secondary">
+              You haven't added any children yet. Click "Add Child" to get started.
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {childrenData.children.map((child) => (
+                <li key={child.id} className="py-4 hover:bg-gray-50 transition-colors duration-150">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-light flex items-center justify-center text-primary">
+                        {child.firstName.charAt(0)}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-text-primary">
+                          {child.firstName} {child.lastName}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {child.firstName} {child.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {/* Age calculation would go here in a real implementation */}
-                            Child details
-                          </div>
+                        <div className="text-sm text-text-secondary">
+                          {/* Age calculation would go here in a real implementation */}
+                          Child details
                         </div>
                       </div>
-                      <Link
-                        to={`/parent/children/${child.id}`}
-                        className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        View details
-                      </Link>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+                    <Link
+                      to={`/parent/children/${child.id}`}
+                      className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-text-primary bg-white hover:bg-gray-50 transition-colors duration-150"
+                    >
+                      View details
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
         
         {/* Recent observations */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Recent Observations</h3>
+        <Card
+          title="Recent Observations"
+          titleAction={
             <Link
               to="/parent/observations/"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+              className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-150"
             >
               View all
             </Link>
-          </div>
-          <div className="border-t border-gray-200">
-            {isLoadingObservations ? (
-              <div className="px-4 py-5 sm:p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ) : !recentObservationsData?.data.length ? (
-              <div className="px-4 py-5 sm:p-6 text-center text-gray-500">
-                No recent observations to display.
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-200">
-                {recentObservationsData.data.slice(0, 3).map((observation) => {
-                  // Parse aiTags if it exists and is a string
-                  const tags = observation.aiTags ? 
-                    (() => {
-                      try { return JSON.parse(observation.aiTags); } 
-                      catch { return []; }
-                    })() : [];
-                    
-                  return (
-                    <li key={observation.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                      <div>
-                        <div className="flex justify-between">
-                          <div className="text-sm font-medium text-gray-900">
-                            {observation.childName}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(observation.createdAt).toLocaleDateString()}
-                          </div>
+          }
+        >
+          {isLoadingObservations ? (
+            <div className="animate-pulse space-y-4">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ) : !recentObservationsData?.data.length ? (
+            <div className="text-center text-text-secondary">
+              No recent observations to display.
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {recentObservationsData.data.slice(0, 3).map((observation) => {
+                // Parse aiTags if it exists and is a string
+                const tags = observation.aiTags ? 
+                  (() => {
+                    try { return JSON.parse(observation.aiTags); } 
+                    catch { return []; }
+                  })() : [];
+                  
+                return (
+                  <li key={observation.id} className="py-4 hover:bg-gray-50 transition-colors duration-150">
+                    <div>
+                      <div className="flex justify-between">
+                        <div className="text-sm font-medium text-text-primary">
+                          {observation.childName}
                         </div>
-                        <div className="mt-2 text-sm text-gray-600">
-                          {observation.content.length > 150 
-                            ? `${observation.content.substring(0, 150)}...` 
-                            : observation.content}
+                        <div className="text-xs text-text-secondary">
+                          {new Date(observation.createdAt).toLocaleDateString()}
                         </div>
-                        {tags.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {tags.slice(0, 3).map((tag: string) => (
-                              <span key={tag} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
+                      <div className="mt-2 text-sm text-text-secondary">
+                        {observation.content.length > 150 
+                          ? `${observation.content.substring(0, 150)}...` 
+                          : observation.content}
+                      </div>
+                      {tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {tags.slice(0, 3).map((tag: string) => (
+                            <span key={tag} className="inline-flex items-center rounded-md bg-primary-light px-2 py-1 text-xs font-medium text-primary">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2">
+                        <Link
+                          to={`/parent/observations/${observation.id}`}
+                          className="text-sm font-medium text-primary hover:text-primary-light transition-colors duration-150"
+                        >
+                          View details →
+                        </Link>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
         
         {/* Upcoming milestones */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Upcoming Milestones</h3>
+        <Card title="Upcoming Milestones">
+          <div className="text-center text-text-secondary">
+            No upcoming milestones to display.
           </div>
-          <div className="border-t border-gray-200">
-            <div className="px-4 py-5 sm:p-6 text-center text-gray-500">
-              No upcoming milestones to display.
-            </div>
-          </div>
-        </div>
+        </Card>
       </div>
     </DashboardLayout>
   );
