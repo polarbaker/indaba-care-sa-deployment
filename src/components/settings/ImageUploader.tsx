@@ -3,6 +3,7 @@ import { Button } from "~/components/ui/Button";
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { useSyncStore } from "~/stores/syncStore";
+import toast from "react-hot-toast";
 
 export type ImageType = "avatar" | "cover";
 
@@ -76,7 +77,7 @@ export function ImageUploader({
   
   // Generate cropped image
   const getCroppedImg = useCallback(async () => {
-    if (!imgRef.current || !completedCrop) return null;
+    if (!imgRef.current || !completedCrop || !selectedFile) return null;
     
     const image = imgRef.current;
     const canvas = document.createElement('canvas');
@@ -111,16 +112,33 @@ export function ImageUploader({
       cropHeight
     );
     
-    return new Promise<Blob>((resolve) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-        },
-        'image/jpeg',
-        0.95
-      );
+    return new Promise<File>(async (resolve, reject) => {
+      try {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Canvas to Blob conversion failed"));
+              return;
+            }
+            
+            // Create a new file from the blob
+            const fileExtension = selectedFile.name.split('.').pop() || 'jpg';
+            const fileName = `${imageType}_${Date.now()}.${fileExtension}`;
+            const croppedFile = new File([blob], fileName, {
+              type: `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`,
+              lastModified: Date.now(),
+            });
+            
+            resolve(croppedFile);
+          },
+          'image/jpeg',
+          0.95
+        );
+      } catch (error) {
+        reject(error);
+      }
     });
-  }, [completedCrop]);
+  }, [completedCrop, imageType, selectedFile]);
   
   // Handle save button click
   const handleSave = async () => {
@@ -129,28 +147,59 @@ export function ImageUploader({
     setIsUploading(true);
     
     try {
-      const croppedImage = await getCroppedImg();
-      if (!croppedImage) {
+      const croppedFile = await getCroppedImg();
+      if (!croppedFile) {
         throw new Error("Failed to crop image");
       }
       
-      // In a real implementation, you would upload the image to your server or cloud storage
-      // For this demo, we'll just create a data URL
-      const reader = new FileReader();
-      reader.readAsDataURL(croppedImage);
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
+      if (isOnline) {
+        // Create a FormData instance
+        const formData = new FormData();
+        formData.append('file', croppedFile);
+        formData.append('type', imageType);
         
-        // Simulate upload delay
-        setTimeout(() => {
+        // In a real implementation, you would upload to your server
+        // For now, we'll simulate a successful upload after a delay
+        // and return a mock URL
+        
+        // Simulate network request
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock response URL - in a real implementation, this would come from your server
+        const uploadedImageUrl = URL.createObjectURL(croppedFile);
+        
+        // Call the callback with the new image URL
+        onImageSaved(uploadedImageUrl);
+        
+        // Clean up
+        setIsUploading(false);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+      } else {
+        // Offline mode - create a data URL to use temporarily
+        const reader = new FileReader();
+        reader.readAsDataURL(croppedFile);
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          
+          // Store the file for later upload when online
+          // This would typically use the sync queue
+          // For now, just use the data URL
           onImageSaved(base64data);
+          
+          // Show message about offline mode
+          toast.info("You're offline. The image will be uploaded when you reconnect.", {
+            duration: 4000,
+          });
+          
           setIsUploading(false);
           setSelectedFile(null);
           setPreviewUrl(null);
-        }, 1000);
-      };
+        };
+      }
     } catch (error) {
       console.error("Error saving image:", error);
+      toast.error("Failed to save image. Please try again.");
       setIsUploading(false);
     }
   };
@@ -207,6 +256,12 @@ export function ImageUploader({
       {/* Display image cropper when file is selected */}
       {selectedFile && previewUrl && (
         <div className="space-y-4">
+          {isUploading && (
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+              <div className="bg-blue-600 h-2.5 rounded-full w-3/4 animate-pulse"></div>
+            </div>
+          )}
+          
           <div className="max-w-md mx-auto">
             <ReactCrop
               crop={crop}
@@ -246,10 +301,14 @@ export function ImageUploader({
         </div>
       )}
       
-      {!isOnline && !selectedFile && (
-        <p className="text-sm text-amber-600">
-          Image upload is disabled while offline. Please connect to the internet to change your {imageType === "avatar" ? "profile picture" : "cover photo"}.
-        </p>
+      {!isOnline && (
+        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-700">
+            You're currently offline. {selectedFile 
+              ? "Images will be saved locally and uploaded when you're back online." 
+              : "Image uploads are limited while offline."}
+          </p>
+        </div>
       )}
     </div>
   );

@@ -57,6 +57,9 @@ model NannyProfile {
   availability      String?
   profileImageUrl   String?
   coverImageUrl     String?
+  specialties       String[]  @default([])  // New field for nanny specialties
+  yearsOfExperience Int?                    // New field for years of experience
+  languages         String[]  @default([])  // New field for languages spoken
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   

@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { FamilyLinks } from "~/components/nanny/FamilyLinks";
 import { FamilyRequestAccess } from "~/components/nanny/FamilyRequestAccess";
 import { CertificationManager } from "~/components/nanny/CertificationManager";
-import { ProfileDetail } from "~/components/settings/ProfileDetail";
+import { ProfileDetails } from "~/components/nanny/ProfileDetails";
 import { AccountSecurity } from "~/components/settings/AccountSecurity";
 import { NotificationSettings } from "~/components/settings/NotificationSettings";
 import { PrivacySettings } from "~/components/settings/PrivacySettings";
@@ -134,7 +134,11 @@ function NannyProfile() {
     
     switch (activeTab) {
       case "details":
-        return <ProfileDetail profile={profileData} userType="nanny" onProfileUpdated={() => refetchProfile()} />;
+        return <ProfileDetails 
+          profile={profileData} 
+          user={profileData.user}
+          onProfileUpdated={() => refetchProfile()} 
+        />;
       case "families":
         return (
           <div className="space-y-8">

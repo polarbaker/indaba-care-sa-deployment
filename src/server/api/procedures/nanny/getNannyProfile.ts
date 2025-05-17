@@ -50,6 +50,20 @@ export const getNannyProfile = baseProcedure
             },
           },
         },
+        user: {
+          select: {
+            displayName: true,
+            pronouns: true,
+            email: true,
+            phoneVerified: true,
+            timeZone: true,
+            locale: true,
+            profileVisibility: true,
+            marketingOptIn: true,
+            notificationSettings: true,
+            settings: true,
+          }
+        }
       },
     });
     

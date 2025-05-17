@@ -15,6 +15,12 @@ export const updateNannyProfile = baseProcedure
       bio: z.string().optional(),
       availability: z.string().optional(),
       profileImageUrl: z.string().optional(),
+      coverImageUrl: z.string().optional(),
+      specialties: z.array(z.string()).optional(),
+      yearsOfExperience: z.number().optional(),
+      languages: z.array(z.string()).optional(),
+      displayName: z.string().optional(),
+      pronouns: z.string().optional(),
     })
   )
   .mutation(async ({ input }) => {
@@ -47,8 +53,23 @@ export const updateNannyProfile = baseProcedure
         bio: input.bio,
         availability: input.availability,
         profileImageUrl: input.profileImageUrl,
+        coverImageUrl: input.coverImageUrl,
+        specialties: input.specialties,
+        yearsOfExperience: input.yearsOfExperience,
+        languages: input.languages,
       },
     });
+    
+    // If displayName or pronouns are provided, update the user record as well
+    if (input.displayName || input.pronouns) {
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          displayName: input.displayName,
+          pronouns: input.pronouns,
+        },
+      });
+    }
     
     return updatedProfile;
   });
